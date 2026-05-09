@@ -68,6 +68,7 @@ describe('createSteerer', () => {
     await store.append([
       createEntry('01J3XYZ1234567890ABCDEFGHK', ['needs-review'], twelveHoursAgo),
     ]);
+    await store.load(); // populate model so entries are classified as borderline
     const failingLlm = (
       _: readonly StateEntry[],
       __: AbortSignal,
@@ -89,6 +90,7 @@ describe('createSteerer', () => {
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
     const entries = [createEntry('01J3XYZ1234567890ABCDEFGHM', ['needs-review'], twelveHoursAgo)];
     await store.append(entries);
+    await store.load(); // populate model so entries appear in classification
     const mockLlm = (
       _entries: readonly StateEntry[],
       _signal: AbortSignal,
@@ -122,5 +124,17 @@ describe('createSteerer', () => {
     const result = await steerer.run(new AbortController().signal);
     expect(isOk(result)).toBe(true);
     if (isOk(result)) expect(result.value.demoted.length).toBeGreaterThan(0);
+  });
+
+  it('returns err when store.append fails (covers appendResult.ok false branch)', async () => {
+    const store = await createTmpStore('append-fail');
+    const failingStore: StateStoreAPI = {
+      ...store,
+      append: () => Promise.resolve(err(new Error('disk full'))),
+    };
+    const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), failingStore);
+    const result = await steerer.run(new AbortController().signal);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain('disk full');
   });
 });

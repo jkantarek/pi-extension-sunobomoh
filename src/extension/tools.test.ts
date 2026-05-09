@@ -104,6 +104,25 @@ describe('buildTriggerSteerTool execute', () => {
     expect(result.content).toContain('Demoted: 1');
   });
 
+  it('includes LLM unavailable note when llmError is set on outcome', async () => {
+    const steerer: SteererAPI = {
+      run: async () =>
+        Promise.resolve(
+          ok<SteeringOutcome>({
+            promoted: [],
+            demoted: [],
+            borderline: [],
+            usedLlm: false,
+            llmError: new Error('rate limited'),
+          }),
+        ),
+    };
+    const tool = buildTriggerSteerTool(steerer);
+    const result = await tool.execute({});
+    expect(result.content).toContain('LLM unavailable');
+    expect(result.content).toContain('rate limited');
+  });
+
   it('returns failure content when steerer fails', async () => {
     const steerer: SteererAPI = {
       run: async () => Promise.resolve({ ok: false, error: new Error('fail') }),

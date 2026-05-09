@@ -195,6 +195,19 @@ describe('API method coverage', () => {
     expect(state?.tickCount).toBe(0);
   });
 
+  it('session_start handler works when pi has no ui (covers if(ui) false branch)', async () => {
+    const { default: factory } = await import('./index.js');
+    const mockPi = createTestPiContext();
+    // Strip ui so the if(ui) branch is false
+    delete (mockPi as unknown as Record<string, unknown>)['ui'];
+    factory(mockPi);
+    const handlers = (
+      mockPi as unknown as { _getHandlers: () => Record<string, unknown[]> }
+    )._getHandlers();
+    const startHandler = handlers['session_start']?.[0] as () => Promise<void>;
+    await expect(startHandler()).resolves.not.toThrow();
+  });
+
   it('session_shutdown handler can be called', async () => {
     const { default: factory } = await import('./index.js');
     const mockPi = createTestPiContext();
