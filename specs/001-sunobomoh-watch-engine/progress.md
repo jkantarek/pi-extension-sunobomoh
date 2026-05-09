@@ -182,3 +182,58 @@ Started: 2026-05-08 20:05:45
 - JSDoc prose comments violate `local/jsdoc-examples-only` rule — only `@example` blocks allowed
 
 ---
+
+## Iteration 5: P004F006 — toStateEntry coercion (2025-01-23)
+
+**User story:** P004 (Watcher Pipeline)  
+**Work unit:** P004F006T001, P004F006T002  
+**Outcome:** ✅ Complete
+
+### Summary
+
+Implemented `toStateEntry()` pure function that converts watcher events to `StateEntry` objects. Function coerces event data through WatcherDefinition extractors and combines with clock/id values. Required aggressive refactoring to satisfy max-lines-per-function=10 constraint.
+
+### Codebase Patterns
+
+1. **max-lines-per-function=10 is extremely strict**
+   - Counts all lines in function signature + body (not just body)
+   - Object literals with 8+ properties require extraction into helpers
+   - Helper functions also must be ≤10 lines, leading to multi-level extraction
+   - Prefer single-expression arrows over body+return when possible
+2. **Spread operator type inference**
+   - `Record<string, unknown>` return type loses property information in spreads
+   - Use `Pick<StateEntry, 'field1' | 'field2'>` for proper type preservation
+   - TypeScript can't infer `StateEntry` from spread of multiple Picks without explicit typing
+3. **Coverage threshold enforcement**
+   - 98% threshold is strict: 97.01% fails, 98.5% passes
+   - Defensive branches (e.g., empty-registry check) may be unreachable via public API
+   - ESLint `prefer-promise-reject-errors` prevents testing non-Error rejection paths
+   - Accept minor coverage gaps for defensive code or linting conflicts
+
+4. **Test strategy for constrained code**
+   - Inline doctests count toward function line limit — move complex tests to `.test.ts`
+   - Black-box `.test.ts` files test public API, not implementation details
+   - When a helper becomes too complex for inline doctest, that's a signal to extract it
+
+5. **Stub files for forward dependencies**
+   - Forward dependencies (hydrators, side-effects) required stub type files
+   - Stub files contain full interface definitions per data-model.md spec
+   - Stubs prevent circular dependencies while maintaining type safety
+
+### Changes
+
+- **Created:** `src/watchers/coerce.ts` (10 files total: apply.ts, outcomes.ts, registry.ts, types.ts in tags/; coerce.ts, coerce.test.ts, registry.ts, types.ts in watchers/; types.ts in hydrators/ and side-effects/)
+- **Modified:** `specs/001-sunobomoh-watch-engine/tasks.md` (marked P004F006T001, P004F006T002 complete)
+- **Commit:** `017ec7b feat(001-sunobomoh-watch-engine): p004f006 toStateEntry coercion`
+
+### Learnings
+
+- The 10-line function limit forces extreme modularity — each helper does ONE thing
+- Multi-level helper extraction (e.g., buildCoreFields → buildExtractedA + buildExtractedB) is necessary for large object construction
+- Type safety and spreads: `Pick<T, ...>` preserves types better than `Record<string, unknown>`
+- Inline doctests are great for simple cases, but black-box `.test.ts` is mandatory for complex scenarios
+- ESLint rules can conflict with coverage goals (e.g., can't test non-Error rejection due to prefer-promise-reject-errors)
+
+### Next Steps
+
+P004F007-F011 remain incomplete. Next iteration should continue with P004F007 (HydratorDefinition types + assertHydrationInvariants).
