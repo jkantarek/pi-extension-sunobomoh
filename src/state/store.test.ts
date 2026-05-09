@@ -80,6 +80,7 @@ describe('StateStore.append()', () => {
       writeFile: (): Promise<void> => Promise.reject(new Error('disk full')),
       appendFile: (): Promise<void> => Promise.reject(new Error('disk full')),
       rename: (): Promise<void> => Promise.reject(new Error('disk full')),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: (): Promise<boolean> => Promise.resolve(false),
     };
     const store = createStateStore('/irrelevant/path', failingFs, createSystemClock());
@@ -138,7 +139,6 @@ describe('StateStore – JSONL line type coverage', () => {
         .map((l) => JSON.stringify(l))
         .join('\n') + '\n';
     await writeFile(path, content, 'utf8');
-
     const store = createStateStore(path, createNodeFileSystem(), createSystemClock());
     await store.load();
     expect(store.model.entryCount).toBe(1);

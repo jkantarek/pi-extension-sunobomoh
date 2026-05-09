@@ -32,8 +32,10 @@ import type { WidgetConfig } from '../ui/types.js';
 export default function (pi: ExtensionAPI): void {
   const fs = createNodeFileSystem();
   const clock = createSystemClock();
-  const stateFile = join(homedir(), '.pi', 'sunobomoh-state.jsonl');
-  const configFile = join(homedir(), '.pi', 'sunobomoh.config.json');
+  const piDir = join(homedir(), '.pi');
+  const stateFile = join(piDir, 'sunobomoh-state.jsonl');
+  const configFile = join(piDir, 'sunobomoh.config.json');
+  void fs.mkdir(piDir); // ensure ~/.pi/ exists; no-op if already present
   const store = createStateStore(stateFile, fs, clock);
   const watcherRegistry = createWatcherRegistry();
   const tagRegistry = createTagRegistry();

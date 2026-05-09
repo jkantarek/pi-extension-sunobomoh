@@ -28,6 +28,7 @@ describe('createConfigStore - load/save', () => {
       writeFile: () => Promise.reject(new Error('disk full')),
       appendFile: () => Promise.reject(new Error('disk full')),
       rename: () => Promise.reject(new Error('disk full')),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: () => Promise.resolve(false),
     };
     const store = createConfigStore('/test', failingFs);
@@ -80,6 +81,7 @@ describe('createConfigStore - watcher management - error handling', () => {
       writeFile: () => Promise.resolve(),
       appendFile: () => Promise.resolve(),
       rename: () => Promise.resolve(),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: () => Promise.resolve(true),
     };
     const store = createConfigStore('/test', failingFs);
@@ -92,6 +94,7 @@ describe('createConfigStore - watcher management - error handling', () => {
       writeFile: () => Promise.reject(new Error('disk full')),
       appendFile: () => Promise.reject(new Error('disk full')),
       rename: () => Promise.reject(new Error('disk full')),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: () => Promise.resolve(true),
     };
     const store = createConfigStore('/test', failingFs);
@@ -104,6 +107,7 @@ describe('createConfigStore - watcher management - error handling', () => {
       writeFile: () => Promise.resolve(),
       appendFile: () => Promise.resolve(),
       rename: () => Promise.resolve(),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: () => Promise.resolve(true),
     };
     const store = createConfigStore('/test', failingFs);
@@ -116,6 +120,7 @@ describe('createConfigStore - watcher management - error handling', () => {
       writeFile: () => Promise.reject(new Error('disk full')),
       appendFile: () => Promise.reject(new Error('disk full')),
       rename: () => Promise.reject(new Error('disk full')),
+      mkdir: (): Promise<void> => Promise.resolve(),
       exists: () => Promise.resolve(true),
     };
     const store = createConfigStore('/test', failingFs);

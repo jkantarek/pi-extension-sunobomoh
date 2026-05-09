@@ -3,6 +3,7 @@ import {
   appendFile as fsAppendFile,
   writeFile as fsWriteFile,
   rename as fsRename,
+  mkdir as fsMkdir,
   access,
 } from 'node:fs/promises';
 import type { IsoTimestamp } from './brands.js';
@@ -15,6 +16,9 @@ import { toIsoTimestamp } from './brands.js';
  * const { join } = await import('node:path');
  * const fs = createNodeFileSystem();
  * const path = join(tmpdir(), `test-ports-${Date.now().toString()}.txt`);
+ * const dir = join(tmpdir(), `test-ports-dir-${Date.now().toString()}`);
+ * await fs.mkdir(dir);
+ * expect(await fs.exists(dir)).toBe(true);
  * await fs.appendFile(path, 'hello');
  * expect(await fs.exists(path)).toBe(true);
  * expect(await fs.readFile(path)).toBe('hello');
@@ -35,6 +39,7 @@ export interface FileSystem {
   writeFile(path: string, data: string): Promise<void>;
   appendFile(path: string, data: string): Promise<void>;
   rename(oldPath: string, newPath: string): Promise<void>;
+  mkdir(path: string): Promise<void>;
   exists(path: string): Promise<boolean>;
 }
 
@@ -48,6 +53,7 @@ export const createNodeFileSystem = (): FileSystem => ({
   writeFile: (path: string, data: string) => fsWriteFile(path, data, 'utf8'),
   appendFile: (path: string, data: string) => fsAppendFile(path, data, 'utf8'),
   rename: (oldPath: string, newPath: string) => fsRename(oldPath, newPath),
+  mkdir: (path: string) => fsMkdir(path, { recursive: true }).then(() => undefined),
   exists: (path: string): Promise<boolean> =>
     access(path).then(
       () => true,
