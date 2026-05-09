@@ -23,6 +23,10 @@ import {
   buildStateCommand,
   buildSteerCommand,
 } from './commands.js';
+import { renderAttentionWidget, renderFooterStatus } from '../ui/widget.js';
+import { createTagEmojiMap } from '../ui/tag-emoji.js';
+import { DEFAULT_SCHEME_PROFILES } from '../ui/scheme-profile.js';
+import type { WidgetConfig } from '../ui/types.js';
 
 /* eslint-disable max-lines-per-function -- DI wiring entry point */
 export default function (pi: ExtensionAPI): void {
@@ -66,11 +70,34 @@ export default function (pi: ExtensionAPI): void {
 
   _setSunobomohInstance(api);
 
+  const widgetConfig: WidgetConfig = {
+    maxLines: 10,
+    grouping: 'attention',
+    tagEmoji: createTagEmojiMap(new Map()),
+    schemeProfiles: DEFAULT_SCHEME_PROFILES,
+  };
+
   pi.on('session_start', async (): Promise<void> => {
     await store.load();
     const mockRunner = (): Promise<Result<readonly never[]>> => Promise.resolve(ok([]));
     const mockSteering = (): Promise<Result<void>> => Promise.resolve(ok(undefined));
     scheduler = createScheduler(DEFAULT_SCHEDULER_CONFIG, mockRunner, mockSteering, clock);
+
+    const nowMs = Date.now();
+    const lines = renderAttentionWidget(store.model, widgetConfig, 'default', nowMs);
+    const statusLine = renderFooterStatus(api.schedulerState, nowMs);
+    const ui = (
+      pi as unknown as {
+        ui?: {
+          setWidget: (id: string, lines: readonly string[]) => void;
+          setStatus: (id: string, text: string) => void;
+        };
+      }
+    ).ui;
+    if (ui) {
+      ui.setWidget('sunobomoh', lines);
+      ui.setStatus('sunobomoh', statusLine);
+    }
   });
 
   pi.on('session_shutdown', (): void => {

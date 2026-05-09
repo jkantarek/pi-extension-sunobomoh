@@ -412,9 +412,9 @@ model and assert returned lines contain emoji, label text, source abbreviation, 
 
 ### P007F008 — `renderAttentionWidget()` and `renderFooterStatus()`
 
-- [ ] P007F008T001 Write black-box tests in `src/ui/widget.test.ts`: `renderAttentionWidget(emptyModel, ...)` returns `[]`; populated model returns lines with correct count up to `maxLines`; overflow produces truncation line; `renderFooterStatus` contains `'sunobomoh'` and `'stopped'` when not running (must FAIL)
-- [ ] P007F008T002 Implement `renderAttentionWidget()` (calls `groupEntries`, renders headers + entry lines, truncation) and `renderFooterStatus()` in `src/ui/widget.ts`
-- [ ] P007F008T003 Wire `renderAttentionWidget` and `renderFooterStatus` into `src/extension/index.ts` `session_start` handler using `ctx.ui.setWidget('sunobomoh', lines)` and `ctx.ui.setStatus('sunobomoh', statusLine)`
+- [x] P007F008T001 Write black-box tests in `src/ui/widget.test.ts`: `renderAttentionWidget(emptyModel, ...)` returns `[]`; populated model returns lines with correct count up to `maxLines`; overflow produces truncation line; `renderFooterStatus` contains `'sunobomoh'` and `'stopped'` when not running (must FAIL)
+- [x] P007F008T002 Implement `renderAttentionWidget()` (calls `groupEntries`, renders headers + entry lines, truncation) and `renderFooterStatus()` in `src/ui/widget.ts`
+- [x] P007F008T003 Wire `renderAttentionWidget` and `renderFooterStatus` into `src/extension/index.ts` `session_start` handler using `ctx.ui.setWidget('sunobomoh', lines)` and `ctx.ui.setStatus('sunobomoh', statusLine)`
 
 ### Exit Criteria: Phase 7 (US5)
 
