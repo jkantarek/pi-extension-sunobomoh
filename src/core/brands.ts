@@ -25,6 +25,8 @@ export { isOk };
  * expect(typeof unsafeEntryId('01ABCDEF')).toBe('string');
  * expect(typeof unsafeWatcherId('01ABCDEF')).toBe('string');
  * expect(typeof unsafeTagId('urgent')).toBe('string');
+ * expect(typeof unsafeIsoTimestamp('2026-05-07T10:00:00Z')).toBe('string');
+ * expect(typeof unsafeResourceUri('test:///item')).toBe('string');
  * ```
  */
 export const toIsoTimestamp = (d: Date): IsoTimestamp => d.toISOString() as IsoTimestamp;
@@ -37,3 +39,5 @@ export const toResourceUri = (s: string): Result<ResourceUri> => {
 export const unsafeEntryId = (s: string): EntryId => s as EntryId;
 export const unsafeWatcherId = (s: string): WatcherId => s as WatcherId;
 export const unsafeTagId = (s: string): TagId => s as TagId;
+export const unsafeIsoTimestamp = (s: string): IsoTimestamp => s as IsoTimestamp;
+export const unsafeResourceUri = (s: string): ResourceUri => s as ResourceUri;

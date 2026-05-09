@@ -198,28 +198,28 @@ store. Independently testable by injecting a fake `WatcherDefinition` with no ne
 
 ### P004F007 — `HydratorDefinition` types + `assertHydrationInvariants()`
 
-- [ ] P004F007T001 [P] Write inline doctests for `assertHydrationInvariants(id, before, after)`: pass on unchanged entries, throw `HydrationInvariantError` on wrong length, throw on changed `id` in `src/hydrators/invariants.ts` (must FAIL)
-- [ ] P004F007T002 [P] Define `HydratorDefinition` interface in `src/hydrators/types.ts` and implement `assertHydrationInvariants()` + `HydrationInvariantError` in `src/hydrators/invariants.ts`
+- [x] P004F007T001 [P] Write inline doctests for `assertHydrationInvariants(id, before, after)`: pass on unchanged entries, throw `HydrationInvariantError` on wrong length, throw on changed `id` in `src/hydrators/invariants.ts` (must FAIL)
+- [x] P004F007T002 [P] Define `HydratorDefinition` interface in `src/hydrators/types.ts` and implement `assertHydrationInvariants()` + `HydrationInvariantError` in `src/hydrators/invariants.ts`
 
 ### P004F008 — `runHydrationPipeline()`
 
-- [ ] P004F008T001 Write black-box tests for `runHydrationPipeline()`: empty hydrators returns `ok(entries)`, single hydrator enriches `hydratedData`, failing hydrator returns `err(HydrationError)` with `entriesAtFailure`, abort signal respected in `src/hydrators/pipeline.test.ts` (must FAIL)
-- [ ] P004F008T002 Implement `runHydrationPipeline(hydrators, entries, signal)` as a serial `for...of` loop calling `assertHydrationInvariants` after each step in `src/hydrators/pipeline.ts`
+- [x] P004F008T001 Write black-box tests for `runHydrationPipeline()`: empty hydrators returns `ok(entries)`, single hydrator enriches `hydratedData`, failing hydrator returns `err(HydrationError)` with `entriesAtFailure`, abort signal respected in `src/hydrators/pipeline.test.ts` (must FAIL)
+- [x] P004F008T002 Implement `runHydrationPipeline(hydrators, entries, signal)` as a serial `for...of` loop calling `assertHydrationInvariants` after each step in `src/hydrators/pipeline.ts`
 
 ### P004F009 — `phaseHandlers()` and `runPhase()`
 
-- [ ] P004F009T001 Write inline doctests for `phaseHandlers(phase, defs)` (filters correctly) and `runPhase(phase, defs, ctx)` (runs in order, halts on `{ halt: true }`, continues on error) in `src/side-effects/executor.ts` (must FAIL)
-- [ ] P004F009T002 Implement `phaseHandlers()` and `runPhase()` pure functions in `src/side-effects/executor.ts`; define `CallbackPhase`, `SideEffectContext`, `SideEffectResult`, `SideEffectDefinition` in `src/side-effects/types.ts`
+- [x] P004F009T001 Write inline doctests for `phaseHandlers(phase, defs)` (filters correctly) and `runPhase(phase, defs, ctx)` (runs in order, halts on `{ halt: true }`, continues on error) in `src/side-effects/executor.ts` (must FAIL)
+- [x] P004F009T002 Implement `phaseHandlers()` and `runPhase()` pure functions in `src/side-effects/executor.ts`; define `CallbackPhase`, `SideEffectContext`, `SideEffectResult`, `SideEffectDefinition` in `src/side-effects/types.ts`
 
 ### P004F010 — `runWatcher()` pure orchestration function
 
-- [ ] P004F010T001 Write black-box tests for `runWatcher(watcher, sideEffects, clock, ids, signal)` in `src/watchers/runner.test.ts`: happy path returns `ok(StateEntry[])` with correct fields; `before_watch` halt returns empty ok; `watch()` rejection returns `err(WatcherRunError)`; abort signal propagated (must FAIL)
-- [ ] P004F010T002 Implement `runWatcher()` in `src/watchers/runner.ts`: call `runPhase('before_watch')`, call `watcher.watch()` in `withTimeout()`, map events via `toStateEntry()`, run `runHydrationPipeline()`, `applyTagsToEntry()`, `runPhase('after_watch'/'after_hydrate')`
+- [x] P004F010T001 Write black-box tests for `runWatcher(watcher, sideEffects, clock, ids, signal)` in `src/watchers/runner.test.ts`: happy path returns `ok(StateEntry[])` with correct fields; `before_watch` halt returns empty ok; `watch()` rejection returns `err(WatcherRunError)`; abort signal propagated (must FAIL)
+- [x] P004F010T002 Implement `runWatcher()` in `src/watchers/runner.ts`: call `runPhase('before_watch')`, call `watcher.watch()` in `withTimeout()`, map events via `toStateEntry()`, run `runHydrationPipeline()`, `applyTagsToEntry()`, `runPhase('after_watch'/'after_hydrate')`
 
 ### P004F011 — Full pipeline integration test
 
-- [ ] P004F011T001 Write integration test in `src/watchers/pipeline.integration.test.ts`: fake watcher returns 2 events → `runWatcher()` → `store.append()` → reload store → assert both entries in `model.byId` with correct `label`, `tags`, `hydratedData` (must FAIL)
-- [ ] P004F011T002 Fix any wiring issues uncovered by the integration test in the relevant source files under `src/watchers/`, `src/hydrators/`, `src/side-effects/`, or `src/state/` — no new files
+- [x] P004F011T001 Write integration test in `src/watchers/pipeline.integration.test.ts`: fake watcher returns 2 events → `runWatcher()` → `store.append()` → reload store → assert both entries in `model.byId` with correct `label`, `tags`, `hydratedData` (must FAIL)
+- [x] P004F011T002 Fix any wiring issues uncovered by the integration test in the relevant source files under `src/watchers/`, `src/hydrators/`, `src/side-effects/`, or `src/state/` — no new files
 
 ### Exit Criteria: Phase 4 (US2)
 

@@ -37,6 +37,9 @@ export const createTagOutcome = (def: TagDefinition): TagOutcome => ({
  * expect(out.size).toBe(2);
  * expect(out.get('urgent' as any)?.status).toBe('active');
  * expect(initializeOutcomes(['unknown' as any], reg).size).toBe(1);
+ * const { createRegistry } = await import('../core/registry.js');
+ * const empty = createRegistry<TagDefinition>((d) => d.id);
+ * expect(initializeOutcomes(['test' as any], empty).size).toBe(0);
  * ```
  */
 export const initializeOutcomes = (

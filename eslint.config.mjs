@@ -18,6 +18,7 @@ export default tseslint.config(
       '*.config.cjs',
       '.github/**',
       '.pi/**',
+      'html/**',
     ],
   },
 
