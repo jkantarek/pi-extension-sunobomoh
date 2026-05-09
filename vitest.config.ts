@@ -18,14 +18,7 @@ export default defineConfig({
       thresholds: {
         lines: 98,
         functions: 98,
-        // Branch threshold is 97% rather than 98% due to three classes of
-        // legitimately uncoverable branches in this codebase:
-        //   1. Defensive abort-mid-tick guards in scheduler.ts (concurrent timing)
-        //   2. Outer catch blocks that require non-Error throws (lint violation to test)
-        //   3. TypeScript-required `?? fallback` on `|| expr` dead-code arms
-        //      produced by strict `noUncheckedIndexedAccess` and Array.prototype.pop()
-        // All other metrics remain at 98%.
-        branches: 97,
+        branches: 98,
         statements: 98,
       },
     },

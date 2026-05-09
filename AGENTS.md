@@ -132,6 +132,10 @@ export function clamp(value: number, min: number, max: number): number { … }
 
 ## Testing
 
+> **See also**: [`TESTING.md`](./TESTING.md) — agent-specific guide to testing
+> patterns, coverage gap diagnosis, and strategies learned from real implementation
+> (errors-as-data, port injection, store load ordering, event handler testing).
+
 ### Philosophy: black-box, functional, no mocks
 
 - Tests must exercise the **public API** of a module, not its internals.
