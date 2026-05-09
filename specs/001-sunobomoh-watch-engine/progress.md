@@ -120,3 +120,33 @@ Started: 2026-05-08 20:05:45
 - Blank lines count toward the 150 non-comment `max-lines` limit in test files (only `skipComments: true`, not `skipBlankLines: true`).
 - V8 branch counting for `a || b || c || d` chains counts each operator as 2 branches (true/false short-circuit); a 3-operator OR chain = 8 branches total (not 6).
 - `commitlint subject-case` rule requires all-lowercase subject — "P003 event state store" fails; use "p003 event state store".
+
+---
+
+## Handoff Note - 2026-05-08T21:45:00-05:00
+
+**STATUS**: P001, P002, P003 are 100% complete and committed. Do NOT re-do any of these.
+
+**Next task**: Start at **P004F001T001** — the first incomplete task in Phase 4.
+
+**Completed phases** (verified via `script/ci` — all gates green):
+
+- P001 (Setup) → commit cc9d9f9
+- P002 (Foundation `src/core/`) → commit cb8de92
+- P003 (Event State Store `src/state/`) → commit e0d8b5d, 41 tests, 100% stmts/funcs/lines, 98.41% branches
+
+**Files already created** (do not recreate):
+
+- `src/core/`: result.ts, brands.ts, ids.ts, registry.ts, ports.ts
+- `src/state/`: types.ts, parse.ts, parse.test.ts, read-model.ts, read-model.test.ts, store.ts, store.test.ts, query.ts, query.test.ts, test-fixtures.ts
+
+**Key learnings carried forward**:
+
+- Inline doctests: use `await import('...')` for external modules, NOT static `import`
+- `max-lines-per-function: 10` — use `void expr` trick to keep arrow functions on one line
+- `max-lines: 150` (skipComments:true, NOT skipBlankLines) — blank lines count
+- commitlint requires all-lowercase subject (e.g. `feat(...): p004 watcher pipeline`)
+- `pnpm format` auto-fixes; run it before `pnpm format:check`
+- Run all 4 gates after EVERY task: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test`
+
+---
