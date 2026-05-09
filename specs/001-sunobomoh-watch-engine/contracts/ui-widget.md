@@ -28,6 +28,7 @@ Patterns: **Pure Function** (all rendering), **Registry** (tag emoji map, scheme
 ```
 
 Rendered example (OSC 8 visible as underline in supported terminals):
+
 ```
 🔴 Fix auth bug in login flow          gh#142    2m
 👀 Review: Rate limiter PR             gh#138    8m
@@ -38,12 +39,12 @@ Rendered example (OSC 8 visible as underline in supported terminals):
 
 Age-brightness mapping:
 
-| Age | Color level | `theme.fg()` name |
-|---|---|---|
-| < 4 h | full brightness | `'text'` |
-| 4 h – 24 h | reduced | `'muted'` |
-| > 24 h | dim | `'dim'` |
-| `needsAttention: true` | always full | `'text'` (override) |
+| Age                    | Color level     | `theme.fg()` name   |
+| ---------------------- | --------------- | ------------------- |
+| < 4 h                  | full brightness | `'text'`            |
+| 4 h – 24 h             | reduced         | `'muted'`           |
+| > 24 h                 | dim             | `'dim'`             |
+| `needsAttention: true` | always full     | `'text'` (override) |
 
 ---
 
@@ -87,8 +88,8 @@ export type AgeColorName = 'text' | 'muted' | 'dim';
 
 /** A fully assembled single-line widget row, ready for setWidget(). */
 export interface RenderedEntryLine {
-  readonly raw: string;      // ANSI + OSC 8 — sent to terminal
-  readonly plain: string;    // no ANSI — for tests / non-colour fallback
+  readonly raw: string; // ANSI + OSC 8 — sent to terminal
+  readonly plain: string; // no ANSI — for tests / non-colour fallback
   readonly entryId: string;
 }
 ```
@@ -113,16 +114,17 @@ export type GroupingStrategyName = 'none' | 'source' | 'tag' | 'date' | 'attenti
  * (e.g., { type: 'date'; tz: string }) without changing the function signature.
  */
 export type GroupingStrategy =
-  | { readonly type: 'none'      }   // default — sequential, oldest→newest, no headers
-  | { readonly type: 'source'    }   // one group per WatcherId, alphabetical
-  | { readonly type: 'tag'       }   // one group per primary tag, highest weight first
-  | { readonly type: 'date'      }   // Today / Yesterday / This week / Older
-  | { readonly type: 'attention' };  // ⚠ Needs attention → then · Monitoring
+  | { readonly type: 'none' } // default — sequential, oldest→newest, no headers
+  | { readonly type: 'source' } // one group per WatcherId, alphabetical
+  | { readonly type: 'tag' } // one group per primary tag, highest weight first
+  | { readonly type: 'date' } // Today / Yesterday / This week / Older
+  | { readonly type: 'attention' }; // ⚠ Needs attention → then · Monitoring
 
 export const DEFAULT_GROUPING: GroupingStrategy = { type: 'none' };
 
-export const parseGroupingStrategy = (name: GroupingStrategyName): GroupingStrategy =>
-  ({ type: name });
+export const parseGroupingStrategy = (name: GroupingStrategyName): GroupingStrategy => ({
+  type: name,
+});
 ```
 
 ### `Group` value object
@@ -141,7 +143,7 @@ export interface Group {
 
 ### `groupEntries()` — pure function
 
-```typescript
+````typescript
 import type { StateEntry } from '../state/types.js';
 
 /**
@@ -196,7 +198,7 @@ export declare const groupEntries: (
   emojiMap: ReadonlyMap<string, string>,
   nowMs: number,
 ) => readonly Group[];
-```
+````
 
 ### Group header format
 
@@ -210,6 +212,7 @@ All headers follow the same `── {label} ──` separator style, themed as `
 ```
 
 The trailing `─` fill extends to terminal width minus label. Implemented as:
+
 ```typescript
 // pure, inside grouping.ts
 const makeHeader = (label: string, width: number): string =>
@@ -218,7 +221,7 @@ const makeHeader = (label: string, width: number): string =>
 
 ---
 
-```typescript
+````typescript
 /**
  * Wrap text in an OSC 8 terminal hyperlink.
  * Supported by iTerm2, WezTerm, Kitty, Ghostty, and most modern terminals.
@@ -240,13 +243,13 @@ export const osc8Link = (text: string, url: string | undefined): string => {
   if (url === undefined) return text;
   return `\x1b]8;;${url}\x1b\\${text}\x1b]8;;\x1b\\`;
 };
-```
+````
 
 ---
 
 ## `src/ui/tag-emoji.ts` — Tag Emoji Registry
 
-```typescript
+````typescript
 /**
  * @example
  * ```ts @import.meta.vitest
@@ -262,10 +265,10 @@ export const osc8Link = (text: string, url: string | undefined): string => {
  * ```
  */
 export const DEFAULT_TAG_EMOJI: ReadonlyMap<string, string> = new Map([
-  ['urgent',        '🔴'],
-  ['needs-review',  '👀'],
+  ['urgent', '🔴'],
+  ['needs-review', '👀'],
   ['informational', 'ℹ️ '],
-  ['stale',         '🕸️ '],
+  ['stale', '🕸️ '],
 ]);
 
 /** Sentinel emoji for tags with no registered mapping — Null Object. */
@@ -273,20 +276,17 @@ export const FALLBACK_EMOJI = '🔵';
 
 export const createTagEmojiMap = (
   overrides: ReadonlyMap<string, string>,
-): ReadonlyMap<string, string> =>
-  new Map([...DEFAULT_TAG_EMOJI, ...overrides]);
+): ReadonlyMap<string, string> => new Map([...DEFAULT_TAG_EMOJI, ...overrides]);
 
-export const emojiForTag = (
-  tagId: string,
-  map: ReadonlyMap<string, string>,
-): string => map.get(tagId) ?? FALLBACK_EMOJI;
-```
+export const emojiForTag = (tagId: string, map: ReadonlyMap<string, string>): string =>
+  map.get(tagId) ?? FALLBACK_EMOJI;
+````
 
 ---
 
 ## `src/ui/scheme-profile.ts` — URI Resolution + Source Abbreviation
 
-```typescript
+````typescript
 import type { SchemeProfile } from './types.js';
 
 /**
@@ -306,41 +306,86 @@ import type { SchemeProfile } from './types.js';
  * ```
  */
 export const DEFAULT_SCHEME_PROFILES: ReadonlyMap<string, SchemeProfile> = new Map([
-  ['github', {
-    abbr: 'gh',
-    resolveUrl: (uri) => uri.replace(/^github:\/\/\//, 'https://github.com/'),
-    shortId:    (uri) => { const m = uri.match(/\/(\d+)$/); return m ? `#${m[1]}` : undefined; },
-  }],
-  ['slack', {
-    abbr: 'sl',
-    resolveUrl: (uri) => uri.replace(/^slack:\/\/\/([^/]+)\/([^/]+)\/(.+)$/, 'https://$1.slack.com/archives/$2/p$3'),
-    shortId:    (uri) => { const m = uri.match(/\/([^/]+)\/[^/]+$/); return m ? `#${m[1]}` : undefined; },
-  }],
-  ['gmail', {
-    abbr: 'gm',
-    resolveUrl: (uri) => uri.replace(/^gmail:\/\/\/[^/]+\/thread\/(.+)$/, 'https://mail.google.com/mail/u/0/#inbox/$1'),
-    shortId:    (uri) => { const m = uri.match(/thread\/(.{8})/); return m ? m[1] : undefined; },
-  }],
-  ['file', {
-    abbr: 'fs',
-    resolveUrl: (uri) => uri,   // file:// is clickable in iTerm2, WezTerm
-    shortId:    (uri) => { const m = uri.match(/\/([^/]+)$/); return m ? m[1] : undefined; },
-  }],
-  ['jira', {
-    abbr: 'ji',
-    resolveUrl: (uri) => uri.replace(/^jira:\/\/\/([^/]+)\/browse\/(.+)$/, 'https://$1/browse/$2'),
-    shortId:    (uri) => { const m = uri.match(/\/([A-Z]+-\d+)$/); return m ? m[1] : undefined; },
-  }],
-  ['browser', {
-    abbr: 'br',
-    resolveUrl: (uri) => uri.replace(/^browser:\/\/\//, 'https://'),
-    shortId:    (_uri) => undefined,
-  }],
-  ['git', {
-    abbr: 'git',
-    resolveUrl: (uri) => uri.replace(/^git:\/\/\//, 'https://'),
-    shortId:    (uri) => { const m = uri.match(/commit\/([0-9a-f]{7})/); return m ? m[1] : undefined; },
-  }],
+  [
+    'github',
+    {
+      abbr: 'gh',
+      resolveUrl: (uri) => uri.replace(/^github:\/\/\//, 'https://github.com/'),
+      shortId: (uri) => {
+        const m = uri.match(/\/(\d+)$/);
+        return m ? `#${m[1]}` : undefined;
+      },
+    },
+  ],
+  [
+    'slack',
+    {
+      abbr: 'sl',
+      resolveUrl: (uri) =>
+        uri.replace(/^slack:\/\/\/([^/]+)\/([^/]+)\/(.+)$/, 'https://$1.slack.com/archives/$2/p$3'),
+      shortId: (uri) => {
+        const m = uri.match(/\/([^/]+)\/[^/]+$/);
+        return m ? `#${m[1]}` : undefined;
+      },
+    },
+  ],
+  [
+    'gmail',
+    {
+      abbr: 'gm',
+      resolveUrl: (uri) =>
+        uri.replace(
+          /^gmail:\/\/\/[^/]+\/thread\/(.+)$/,
+          'https://mail.google.com/mail/u/0/#inbox/$1',
+        ),
+      shortId: (uri) => {
+        const m = uri.match(/thread\/(.{8})/);
+        return m ? m[1] : undefined;
+      },
+    },
+  ],
+  [
+    'file',
+    {
+      abbr: 'fs',
+      resolveUrl: (uri) => uri, // file:// is clickable in iTerm2, WezTerm
+      shortId: (uri) => {
+        const m = uri.match(/\/([^/]+)$/);
+        return m ? m[1] : undefined;
+      },
+    },
+  ],
+  [
+    'jira',
+    {
+      abbr: 'ji',
+      resolveUrl: (uri) =>
+        uri.replace(/^jira:\/\/\/([^/]+)\/browse\/(.+)$/, 'https://$1/browse/$2'),
+      shortId: (uri) => {
+        const m = uri.match(/\/([A-Z]+-\d+)$/);
+        return m ? m[1] : undefined;
+      },
+    },
+  ],
+  [
+    'browser',
+    {
+      abbr: 'br',
+      resolveUrl: (uri) => uri.replace(/^browser:\/\/\//, 'https://'),
+      shortId: (_uri) => undefined,
+    },
+  ],
+  [
+    'git',
+    {
+      abbr: 'git',
+      resolveUrl: (uri) => uri.replace(/^git:\/\/\//, 'https://'),
+      shortId: (uri) => {
+        const m = uri.match(/commit\/([0-9a-f]{7})/);
+        return m ? m[1] : undefined;
+      },
+    },
+  ],
 ]);
 
 /**
@@ -363,13 +408,13 @@ export const sourceLabel = (uri: string, profile: SchemeProfile): string => {
   const id = profile.shortId(uri);
   return id !== undefined ? `${profile.abbr}:${id}` : profile.abbr;
 };
-```
+````
 
 ---
 
 ## `src/ui/temporal.ts` — Relative Time + Age Color
 
-```typescript
+````typescript
 import type { AgeColorName } from './types.js';
 
 /**
@@ -389,11 +434,11 @@ import type { AgeColorName } from './types.js';
  */
 export const relativeTime = (ageMs: number): string => {
   const s = Math.floor(ageMs / 1_000);
-  if (s < 60)  return `${s}s`;
+  if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
-  if (m < 60)  return `${m}m`;
+  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
-  if (h < 24)  return `${h}h`;
+  if (h < 24) return `${h}h`;
   return `${Math.floor(h / 24)}d`;
 };
 
@@ -401,16 +446,13 @@ export const relativeTime = (ageMs: number): string => {
  * Map entry age to a theme foreground color name.
  * needsAttention overrides age decay — always returns 'text'.
  */
-export const ageColorName = (
-  ageMs: number,
-  needsAttention = false,
-): AgeColorName => {
-  if (needsAttention)          return 'text';
-  if (ageMs < 4 * 3_600_000)  return 'text';
+export const ageColorName = (ageMs: number, needsAttention = false): AgeColorName => {
+  if (needsAttention) return 'text';
+  if (ageMs < 4 * 3_600_000) return 'text';
   if (ageMs < 24 * 3_600_000) return 'muted';
   return 'dim';
 };
-```
+````
 
 ---
 
@@ -418,12 +460,12 @@ export const ageColorName = (
 
 Assembles one widget row from a `StateEntry`. Pure function — no I/O, no side-effects.
 
-```typescript
+````typescript
 import type { Theme } from '@mariozechner/pi-tui';
 import type { StateEntry } from '../state/types.js';
 import type { RenderedEntryLine, SchemeProfile, WidgetConfig } from './types.js';
-import { osc8Link }       from './hyperlink.js';
-import { emojiForTag }    from './tag-emoji.js';
+import { osc8Link } from './hyperlink.js';
+import { emojiForTag } from './tag-emoji.js';
 import { resolveScheme, sourceLabel } from './scheme-profile.js';
 import { relativeTime, ageColorName } from './temporal.js';
 import { truncateToWidth, visibleWidth } from '@mariozechner/pi-tui';
@@ -453,7 +495,7 @@ export declare const renderEntryLine: (
   nowMs: number,
   profiles: ReadonlyMap<string, SchemeProfile>,
 ) => RenderedEntryLine;
-```
+````
 
 **Internal layout** (implemented in source, documented here for implementors):
 
@@ -473,7 +515,7 @@ terminals that declare no colour support.
 
 ## `src/ui/widget.ts` — Widget + Footer Assembly
 
-```typescript
+````typescript
 import type { Theme } from '@mariozechner/pi-tui';
 import type { ReadModel } from '../state/read-model.js';
 import type { WidgetConfig } from './types.js';
@@ -528,7 +570,7 @@ export declare const renderFooterStatus: (
   theme: Theme,
   nowMs: number,
 ) => string;
-```
+````
 
 **Widget render logic** (documented for implementors):
 
@@ -565,9 +607,9 @@ All widget config lives under the `widget` key in `SunobomohConfig`:
     "maxLines": 8,
     "grouping": "source",
     "tagEmoji": {
-      "urgent":   "🚨",
-      "blocked":  "🚫",
-      "my-tag":   "🎯"
+      "urgent": "🚨",
+      "blocked": "🚫",
+      "my-tag": "🎯"
     },
     "schemeProfiles": {
       "jira": { "abbr": "ji", "baseUrl": "https://jira.corp.com" }
@@ -624,12 +666,12 @@ src/ui/
 
 ## Terminal Compatibility
 
-| Feature | iTerm2 | WezTerm | Kitty | Ghostty | Standard xterm |
-|---|---|---|---|---|---|
-| OSC 8 hyperlinks | ✅ | ✅ | ✅ | ✅ | ❌ (plain text) |
-| Emoji width | ✅ | ✅ | ✅ | ✅ | varies |
-| file:// links | ✅ | ✅ | ❌ | ✅ | ❌ |
-| ANSI colours | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Feature          | iTerm2 | WezTerm | Kitty | Ghostty | Standard xterm  |
+| ---------------- | ------ | ------- | ----- | ------- | --------------- |
+| OSC 8 hyperlinks | ✅     | ✅      | ✅    | ✅      | ❌ (plain text) |
+| Emoji width      | ✅     | ✅      | ✅    | ✅      | varies          |
+| file:// links    | ✅     | ✅      | ❌    | ✅      | ❌              |
+| ANSI colours     | ✅     | ✅      | ✅    | ✅      | ✅              |
 
 When OSC 8 is not supported, `osc8Link()` text still appears — the entry label is always
 readable. The `plain` field in `RenderedEntryLine` enables test assertions without ANSI.

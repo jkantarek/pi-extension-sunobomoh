@@ -25,7 +25,7 @@ they appear in `watcher.sideEffects`.
 
 ## Interfaces
 
-```typescript
+````typescript
 import type { WatcherId } from '../core/brands.js';
 import type { StateEntry } from '../state/types.js';
 
@@ -108,7 +108,7 @@ export interface SideEffectDefinition {
   /** The callback. May be async. Must honour signal.aborted. */
   readonly handler: (ctx: SideEffectContext) => Promise<SideEffectResult | void>;
 }
-```
+````
 
 ---
 
@@ -116,7 +116,7 @@ export interface SideEffectDefinition {
 
 No class. Two exported pure functions. No instance state.
 
-```typescript
+````typescript
 import type { Result } from '../core/result.js';
 import type { WatcherId } from '../core/brands.js';
 import type { StateEntry } from '../state/types.js';
@@ -179,9 +179,10 @@ export declare const runPhase: (
   defs: readonly SideEffectDefinition[],
   ctx: SideEffectContext,
 ) => Promise<Result<PhaseRunResult, SideEffectError>>;
-```
+````
 
 **Execution Contract**:
+
 1. `phaseHandlers(phase, defs)` filters in O(n).
 2. `runPhase` iterates the filtered list in array order.
 3. Each handler receives an immutable `SideEffectContext`.
@@ -213,7 +214,7 @@ const githubWatcher: WatcherDefinition = {
       phase: 'after_hydrate',
       // After hydration, notify Slack for urgent entries
       handler: async (ctx) => {
-        const urgent = ctx.entries.filter(e => e.tags.includes('urgent'));
+        const urgent = ctx.entries.filter((e) => e.tags.includes('urgent'));
         for (const entry of urgent) {
           await slackClient.post(entry.sourceUri, entry.hydratedData);
         }

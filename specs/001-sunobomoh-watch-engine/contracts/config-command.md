@@ -36,9 +36,9 @@ export interface SunobomohConfig {
 
 /** All widget-related config under one key. See contracts/ui-widget.md for field semantics. */
 export interface WidgetUserConfig {
-  readonly maxLines?: number;                                                 // default: 8
-  readonly grouping?: 'none' | 'source' | 'tag' | 'date' | 'attention';    // default: 'none'
-  readonly tagEmoji?: Readonly<Record<string, string>>;                      // tag overrides
+  readonly maxLines?: number; // default: 8
+  readonly grouping?: 'none' | 'source' | 'tag' | 'date' | 'attention'; // default: 'none'
+  readonly tagEmoji?: Readonly<Record<string, string>>; // tag overrides
   readonly schemeProfiles?: Readonly<Record<string, { abbr?: string; baseUrl?: string }>>;
 }
 
@@ -90,7 +90,7 @@ export interface BuiltinWatcherEntry {
 Pattern: **Thin Repository** — read/write config file only. Does not touch the
 WatcherRegistry or the scheduler. Callers apply changes live after calling store methods.
 
-```typescript
+````typescript
 import type { Result } from '../core/result.js';
 import type { FileSystem } from '../core/ports.js';
 
@@ -134,13 +134,11 @@ export interface ConfigStoreAPI {
  * if (isOk(removed)) expect(removed.value.watchers).toHaveLength(0);
  * ```
  */
-export declare const createConfigStore: (
-  filePath: string,
-  fs: FileSystem,
-) => ConfigStoreAPI;
-```
+export declare const createConfigStore: (filePath: string, fs: FileSystem) => ConfigStoreAPI;
+````
 
 **Default config** (returned when file does not exist):
+
 ```typescript
 const DEFAULT_CONFIG: SunobomohConfig = {
   watchers: [],
@@ -154,7 +152,7 @@ const DEFAULT_CONFIG: SunobomohConfig = {
 Walks a config value tree, replacing `"$FOO"` string tokens with `process.env['FOO'] ?? ''`.
 Pure except for `process.env` read — injected in tests via the `env` parameter.
 
-```typescript
+````typescript
 /**
  * Replace "$ENV_VAR" references in a config value tree with their runtime values.
  * Walks objects and arrays recursively. Non-string primitives pass through unchanged.
@@ -175,9 +173,9 @@ Pure except for `process.env` read — injected in tests via the `env` parameter
  */
 export declare const resolveEnvRefs: (
   config: unknown,
-  env?: Record<string, string | undefined>,  // defaults to process.env
+  env?: Record<string, string | undefined>, // defaults to process.env
 ) => unknown;
-```
+````
 
 ---
 
@@ -186,7 +184,7 @@ export declare const resolveEnvRefs: (
 Iterates the `properties` of a TypeBox `TObject` schema and collects each field's value
 using pi's built-in `ctx.ui.input()` and `ctx.ui.select()` dialogs. No custom TUI component.
 
-```typescript
+````typescript
 import type { TSchema, TObject } from 'typebox';
 import type { ExtensionCommandContext } from '@mariozechner/pi-coding-agent';
 import type { Result } from '../core/result.js';
@@ -233,9 +231,10 @@ export declare const collectSchemaValues: (
   schema: TObject,
   ctx: ExtensionCommandContext,
 ) => Promise<Result<Record<string, unknown>, 'cancelled' | Error>>;
-```
+````
 
 **Why sequential `ctx.ui.input()` calls, not a custom TUI component:**
+
 - Stays within the 150-line file limit
 - Re-uses pi's own keyboard handling, theming, and IME support
 - Each field can be individually cancelled via Escape
@@ -248,7 +247,7 @@ export declare const collectSchemaValues: (
 The canonical map from config `id` strings to `WatcherDefinition` objects for all
 reference implementations. New built-in watchers are added here and nowhere else.
 
-```typescript
+````typescript
 import type { BuiltinWatcherEntry } from '../config/types.js';
 
 /**
@@ -265,19 +264,18 @@ import type { BuiltinWatcherEntry } from '../config/types.js';
  * }
  * ```
  */
-export declare const createBuiltinWatcherBundle: () =>
-  ReadonlyMap<string, BuiltinWatcherEntry>;
-```
+export declare const createBuiltinWatcherBundle: () => ReadonlyMap<string, BuiltinWatcherEntry>;
+````
 
 **Bundle contents by phase:**
 
-| Phase | id | Name |
-|---|---|---|
-| 3 | `filesystem` | Filesystem |
-| 3 | `github` | GitHub |
-| 4 | `gmail` | Gmail |
-| 4 | `slack` | Slack |
-| 4 | `browser` | Browser Tabs |
+| Phase | id           | Name         |
+| ----- | ------------ | ------------ |
+| 3     | `filesystem` | Filesystem   |
+| 3     | `github`     | GitHub       |
+| 4     | `gmail`      | Gmail        |
+| 4     | `slack`      | Slack        |
+| 4     | `browser`    | Browser Tabs |
 
 ---
 
@@ -421,10 +419,10 @@ ctx.ui.notify(
 
 Both flows apply changes **without requiring `/reload`**:
 
-| Operation | Config file | Registry | Scheduler |
-|---|---|---|---|
-| Add | `ConfigStore.addWatcher()` | `api.registerWatcher()` | Picks up watcher on next tick |
-| Remove | `ConfigStore.removeWatcher()` | `api.unregisterWatcher()` | Aborts in-flight tick for that watcher |
+| Operation | Config file                   | Registry                  | Scheduler                              |
+| --------- | ----------------------------- | ------------------------- | -------------------------------------- |
+| Add       | `ConfigStore.addWatcher()`    | `api.registerWatcher()`   | Picks up watcher on next tick          |
+| Remove    | `ConfigStore.removeWatcher()` | `api.unregisterWatcher()` | Aborts in-flight tick for that watcher |
 
 The config file is the source of truth on disk. The registry change takes effect immediately
 in the running process. A subsequent `/reload` or pi restart will re-read the config file

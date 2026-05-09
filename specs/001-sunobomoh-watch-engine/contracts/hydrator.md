@@ -10,7 +10,7 @@ Patterns: **Middleware Pipeline** (identical `(entries, signal) => entries` shap
 
 ## `src/hydrators/types.ts`
 
-```typescript
+````typescript
 import type { StateEntry } from '../state/types.js';
 
 /**
@@ -51,7 +51,7 @@ export interface HydratorDefinition {
    */
   hydrate(entries: readonly StateEntry[], signal: AbortSignal): Promise<readonly StateEntry[]>;
 }
-```
+````
 
 ---
 
@@ -60,7 +60,7 @@ export interface HydratorDefinition {
 The entire pipeline is one exported pure function. No class, no instance state.
 Internally a `for...of` loop; each step receives the output of the previous.
 
-```typescript
+````typescript
 import type { Result } from '../core/result.js';
 import type { StateEntry } from '../state/types.js';
 import type { HydratorDefinition } from './types.js';
@@ -92,7 +92,7 @@ export declare const runHydrationPipeline: (
   entries: readonly StateEntry[],
   signal: AbortSignal,
 ) => Promise<Result<readonly StateEntry[], HydrationError>>;
-```
+````
 
 ---
 
@@ -101,14 +101,16 @@ export declare const runHydrationPipeline: (
 Extracted separately so invariant logic is independently testable.
 Called by `runHydrationPipeline` after every hydrator step.
 
-```typescript
+````typescript
 import type { StateEntry } from '../state/types.js';
 
 export class HydrationInvariantError extends Error {
   constructor(
     public readonly hydratorId: string,
     public readonly violation: string,
-  ) { super(`Hydration invariant violated by "${hydratorId}": ${violation}`); }
+  ) {
+    super(`Hydration invariant violated by "${hydratorId}": ${violation}`);
+  }
 }
 
 /**
@@ -134,7 +136,7 @@ export declare const assertHydrationInvariants: (
   before: readonly StateEntry[],
   after: readonly StateEntry[],
 ) => void;
-```
+````
 
 ---
 

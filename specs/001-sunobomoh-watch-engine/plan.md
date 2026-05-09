@@ -21,37 +21,37 @@ bucket. Each watcher carries a configurable side-effect array modelled after Act
 
 ## Technical Context
 
-| Concern | Decision |
-|---------|----------|
-| **Language/Version** | TypeScript 5.5+, ESM, strict mode |
-| **Runtime** | Node.js 20 LTS (pi extension runtime via jiti) |
-| **Primary Peer** | `@mariozechner/pi-coding-agent` — ExtensionAPI, tools, TUI |
-| **Schema Validation** | TypeBox (`typebox`) — same library used by pi for tool parameters |
-| **ID Generation** | `ulid` — monotonic factory with injectable PRNG (extended randomness variable) |
-| **State Storage** | Append-only JSONL file at configurable path (default: `.pi/sunobomoh-state.jsonl`) |
-| **Scheduling** | Self-scheduling `setTimeout` + injected `Clock` port; persistence via `pi.appendEntry()` |
-| **Testing** | Vitest 4 + vite-plugin-doctest inline doctests |
-| **Coverage** | ≥ 98% lines / functions / branches / statements |
-| **Target Platform** | Any OS that runs pi (Linux, macOS) |
-| **Performance Goals** | < 500 ms per watcher poll; state queries < 50 ms for 10 k entries |
-| **Constraints** | ≤ 150 non-comment lines per source file; no mocks in tests |
-| **Scale/Scope** | Dozens of watchers; thousands of state entries per session |
+| Concern               | Decision                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| **Language/Version**  | TypeScript 5.5+, ESM, strict mode                                                        |
+| **Runtime**           | Node.js 20 LTS (pi extension runtime via jiti)                                           |
+| **Primary Peer**      | `@mariozechner/pi-coding-agent` — ExtensionAPI, tools, TUI                               |
+| **Schema Validation** | TypeBox (`typebox`) — same library used by pi for tool parameters                        |
+| **ID Generation**     | `ulid` — monotonic factory with injectable PRNG (extended randomness variable)           |
+| **State Storage**     | Append-only JSONL file at configurable path (default: `.pi/sunobomoh-state.jsonl`)       |
+| **Scheduling**        | Self-scheduling `setTimeout` + injected `Clock` port; persistence via `pi.appendEntry()` |
+| **Testing**           | Vitest 4 + vite-plugin-doctest inline doctests                                           |
+| **Coverage**          | ≥ 98% lines / functions / branches / statements                                          |
+| **Target Platform**   | Any OS that runs pi (Linux, macOS)                                                       |
+| **Performance Goals** | < 500 ms per watcher poll; state queries < 50 ms for 10 k entries                        |
+| **Constraints**       | ≤ 150 non-comment lines per source file; no mocks in tests                               |
+| **Scale/Scope**       | Dozens of watchers; thousands of state entries per session                               |
 
 ---
 
 ## Constitution Check
 
-*Re-checked after Phase 1 design.*
+_Re-checked after Phase 1 design._
 
-| Rule | Status | Notes |
-|------|--------|-------|
-| ≤ 150 non-comment lines per file | ✅ PASS | Domain split enforces this |
-| One public concern per file | ✅ PASS | Each module has a single named purpose |
-| No `@ts-ignore` | ✅ PASS | TypeBox schemas provide runtime safety |
-| Inline doctests only | ✅ PASS | All JSDoc blocks use `@example @import.meta.vitest` |
-| 98%+ coverage | ✅ PASS | Pure-function design makes all paths reachable |
-| No mocks | ✅ PASS | Watchers/hydrators are injected; pure functions dominate |
-| TDD order: RED → GREEN → BLUE | ✅ PASS | Tasks enforced per feature group |
+| Rule                             | Status  | Notes                                                    |
+| -------------------------------- | ------- | -------------------------------------------------------- |
+| ≤ 150 non-comment lines per file | ✅ PASS | Domain split enforces this                               |
+| One public concern per file      | ✅ PASS | Each module has a single named purpose                   |
+| No `@ts-ignore`                  | ✅ PASS | TypeBox schemas provide runtime safety                   |
+| Inline doctests only             | ✅ PASS | All JSDoc blocks use `@example @import.meta.vitest`      |
+| 98%+ coverage                    | ✅ PASS | Pure-function design makes all paths reachable           |
+| No mocks                         | ✅ PASS | Watchers/hydrators are injected; pure functions dominate |
+| TDD order: RED → GREEN → BLUE    | ✅ PASS | Tasks enforced per feature group                         |
 
 ---
 
@@ -165,17 +165,17 @@ Every file targets < 100 non-comment lines; none approach the 150-line ESLint li
 
 ## Architectural Decisions (summary — details in research.md and architecture-review.md)
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| State persistence | Append-only JSONL | Matches pi session format; zero deps; easy tail/grep |
-| Watcher plugin model | TypeBox-validated plugin objects (not classes) | Composable, testable, no inheritance |
-| Hydration ordering | Ordered array, serial execution | Predictable; avoids race conditions |
-| Side-effect model | Active Record callback phases on each watcher | Familiar, self-contained, per-watcher config |
-| Steering intelligence | Rule-based default + opt-in LLM call via pi.sendUserMessage | Usable offline; LLM adds value when available |
-| URI scheme | RFC 3986 with custom schemes (`github:`, `gmail:`, `slack:`, `file:`, `browser:`) | Not HTTP-limited; serializable as string |
-| Tag outcomes | Typed per TagDefinition via TypeBox schema | Enables per-tag validation without generics explosion |
-| Scheduler state | `pi.appendEntry()` per-run record | Survives pi session restarts; queryable |
-| Coverage strategy | Pure functions + dependency injection | Eliminates need for mocks; every path reachable |
+| Decision              | Choice                                                                            | Rationale                                             |
+| --------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| State persistence     | Append-only JSONL                                                                 | Matches pi session format; zero deps; easy tail/grep  |
+| Watcher plugin model  | TypeBox-validated plugin objects (not classes)                                    | Composable, testable, no inheritance                  |
+| Hydration ordering    | Ordered array, serial execution                                                   | Predictable; avoids race conditions                   |
+| Side-effect model     | Active Record callback phases on each watcher                                     | Familiar, self-contained, per-watcher config          |
+| Steering intelligence | Rule-based default + opt-in LLM call via pi.sendUserMessage                       | Usable offline; LLM adds value when available         |
+| URI scheme            | RFC 3986 with custom schemes (`github:`, `gmail:`, `slack:`, `file:`, `browser:`) | Not HTTP-limited; serializable as string              |
+| Tag outcomes          | Typed per TagDefinition via TypeBox schema                                        | Enables per-tag validation without generics explosion |
+| Scheduler state       | `pi.appendEntry()` per-run record                                                 | Survives pi session restarts; queryable               |
+| Coverage strategy     | Pure functions + dependency injection                                             | Eliminates need for mocks; every path reachable       |
 
 ---
 
@@ -224,18 +224,18 @@ pi session_shutdown
 
 ## Pi Extension Integration Points
 
-| Pi API | Usage |
-|--------|-------|
-| `pi.on("session_start")` | Bootstrap: load config → register built-ins → open registration window → start scheduler |
-| `pi.on("session_shutdown")` | Stop scheduler (abort in-flight tick), clear registries |
-| `pi.appendEntry(type, data)` | Persist scheduler heartbeats for restart recovery |
-| `pi.registerTool(def)` | `watch_query`, `watch_mark_attention`, `watch_trigger_steer` |
-| `pi.registerCommand(name, opts)` | `/watch`, `/state`, `/hydrate`, `/steer` |
-| `ctx.ui.setWidget(id, lines)` | Compact attention widget above editor — lines from `renderAttentionWidget()` |
-| `ctx.ui.setStatus(id, text)` | Footer: `renderFooterStatus()` — count + scheduler countdown |
-| `ctx.ui.setFooter(fn)` | Optional full footer override |
-| `pi.sendUserMessage(msg, opts)` | Deliver borderline-entry summary to LLM for steering decisions |
-| `pi.events` | Internal bus: `sunobomoh:watch_complete`, `sunobomoh:steering_complete`, `sunobomoh:watch_error` |
+| Pi API                           | Usage                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `pi.on("session_start")`         | Bootstrap: load config → register built-ins → open registration window → start scheduler         |
+| `pi.on("session_shutdown")`      | Stop scheduler (abort in-flight tick), clear registries                                          |
+| `pi.appendEntry(type, data)`     | Persist scheduler heartbeats for restart recovery                                                |
+| `pi.registerTool(def)`           | `watch_query`, `watch_mark_attention`, `watch_trigger_steer`                                     |
+| `pi.registerCommand(name, opts)` | `/watch`, `/state`, `/hydrate`, `/steer`                                                         |
+| `ctx.ui.setWidget(id, lines)`    | Compact attention widget above editor — lines from `renderAttentionWidget()`                     |
+| `ctx.ui.setStatus(id, text)`     | Footer: `renderFooterStatus()` — count + scheduler countdown                                     |
+| `ctx.ui.setFooter(fn)`           | Optional full footer override                                                                    |
+| `pi.sendUserMessage(msg, opts)`  | Deliver borderline-entry summary to LLM for steering decisions                                   |
+| `pi.events`                      | Internal bus: `sunobomoh:watch_complete`, `sunobomoh:steering_complete`, `sunobomoh:watch_error` |
 
 ---
 
@@ -284,10 +284,7 @@ interface HydratorDefinition {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  hydrate(
-    entries: readonly StateEntry[],
-    signal: AbortSignal
-  ): Promise<readonly StateEntry[]>;
+  hydrate(entries: readonly StateEntry[], signal: AbortSignal): Promise<readonly StateEntry[]>;
 }
 ```
 
@@ -295,9 +292,12 @@ interface HydratorDefinition {
 
 ```typescript
 type CallbackPhase =
-  | 'before_watch'   | 'after_watch'
-  | 'before_hydrate' | 'after_hydrate'
-  | 'before_steer'   | 'after_steer';
+  | 'before_watch'
+  | 'after_watch'
+  | 'before_hydrate'
+  | 'after_hydrate'
+  | 'before_steer'
+  | 'after_steer';
 
 interface SideEffectDefinition {
   readonly id: string;
@@ -311,10 +311,10 @@ interface SideEffectDefinition {
 ```typescript
 interface StateEntry {
   readonly type: 'state_entry';
-  readonly id: EntryId;                      // ULID (monotonic, 26-char)
+  readonly id: EntryId; // ULID (monotonic, 26-char)
   readonly sourceId: WatcherId;
-  readonly sourceUri: ResourceUri;           // RFC 3986 URI, any scheme
-  readonly label: string;                    // human-readable display name (TUI)
+  readonly sourceUri: ResourceUri; // RFC 3986 URI, any scheme
+  readonly label: string; // human-readable display name (TUI)
   readonly timestamp: IsoTimestamp;
   readonly tags: readonly TagId[];
   readonly outcomes: ReadonlyMap<TagId, TagOutcome>;
@@ -331,6 +331,7 @@ interface StateEntry {
 ## Phased Delivery
 
 ### Phase 1 — Core Engine (MVP)
+
 - StateStore (JSONL read/write, `projectLine()` projection)
 - WatcherRegistry + `runWatcher()` (no external API calls — filesystem watcher as reference impl)
 - `runHydrationPipeline()` (serial, ordered)
@@ -340,6 +341,7 @@ interface StateEntry {
 - Pi extension wired: `session_start`, `session_shutdown`, `/state` command, `watch_query` tool
 
 ### Phase 2 — Full Tag Outcomes + Steering
+
 - TagOutcome schemas per TagDefinition
 - `scoreEntry()` + `isPromotable()`/`isDemotable()`/`isBorderline()` + `createSteerer()`
 - Hourly steering trigger via `shouldRunSteering()` in Scheduler
@@ -347,6 +349,7 @@ interface StateEntry {
 - Optional LLM steering via `LlmSteeringStrategy` + `pi.sendUserMessage`
 
 ### Phase 3 — Reference Watchers + TUI
+
 - Reference watcher: `FilesystemWatcher` (uses `chokidar` or `node:fs/promises`)
 - Reference watcher: `GitHubWatcher` (GitHub REST API via personal token)
 - TUI widget + footer status
@@ -354,6 +357,7 @@ interface StateEntry {
 - Full pi package manifest for `pi install`
 
 ### Phase 4 — Extended Reference Watchers
+
 - `GmailWatcher` (Gmail API)
 - `SlackWatcher` (Slack Web API)
 - `BrowserTabWatcher` (Chrome DevTools Protocol / `chrome-remote-interface`)

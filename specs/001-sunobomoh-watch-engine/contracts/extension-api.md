@@ -33,7 +33,7 @@ Because pi extensions run in the same Node.js process, a module-level variable i
 `@your-org/pi-extension-sunobomoh` is shared between the sunobomoh factory and any
 consumer extension that imports from the same package. No `pi` argument threading needed.
 
-```typescript
+````typescript
 /**
  * @example
  * ```ts @import.meta.vitest
@@ -60,13 +60,13 @@ export const _setSunobomohInstance = (api: SunobomohAPI): void => {
  * Always defined by the time any session_start handler runs.
  */
 export const getSunobomoh = (): SunobomohAPI | undefined => INSTANCE;
-```
+````
 
 ---
 
 ## `SunobomohAPI` Interface
 
-```typescript
+````typescript
 import type { WatcherDefinition } from '../watchers/types.js';
 import type { TagDefinition } from '../tags/types.js';
 import type { StateQueryAPI } from '../state/query.js';
@@ -136,7 +136,7 @@ export interface SunobomohAPI {
   /** Current scheduler state — safe to read at any time. */
   readonly schedulerState: SchedulerState;
 }
-```
+````
 
 ---
 
@@ -174,11 +174,13 @@ pi fires session_start (in extension load order)
 every watcher registered in any `session_start` is visible on the first tick.
 
 **On `/reload`** (session_start fires again with `reason: "reload"`):
+
 - The `initHandler` clears the WatcherRegistry and TagRegistry (except built-in tags)
 - All `registerWatcher` / `registerTag` calls in consumer `session_start` re-execute
 - The scheduler is restarted with a fresh tick timer
 
 **On `session_shutdown`**:
+
 - Scheduler stops; any in-flight tick is aborted via AbortController
 - WatcherRegistry and TagRegistry are cleared
 - `INSTANCE` is NOT set to undefined (it outlives sessions; the next session_start reinitialises its internal state)
@@ -191,7 +193,7 @@ every watcher registered in any `session_start` is visible on the first tick.
 // .pi/sunobomoh.config.json
 {
   "watchers": [
-    { "id": "github",     "config": { "owner": "...", "repo": "...", "token": "GITHUB_TOKEN" } },
+    { "id": "github", "config": { "owner": "...", "repo": "...", "token": "GITHUB_TOKEN" } },
     { "id": "filesystem", "config": { "paths": ["./src"], "extensions": [".ts"] } }
   ]
 }
@@ -200,7 +202,7 @@ every watcher registered in any `session_start` is visible on the first tick.
 Internally, sunobomoh's `initHandler` calls:
 
 ```typescript
-const bundle = createBuiltinWatcherBundle();  // Map<string, WatcherDefinition>
+const bundle = createBuiltinWatcherBundle(); // Map<string, WatcherDefinition>
 for (const { id, config } of sunobomohConfig.watchers) {
   const definition = bundle.get(id);
   if (definition === undefined) {
@@ -284,28 +286,30 @@ Everything a consumer needs to write a watcher plugin:
 
 ```typescript
 // Types
-export type { WatcherDefinition, BoundWatcher }       from './watchers/types.js';
-export type { HydratorDefinition }                    from './hydrators/types.js';
-export type { SideEffectDefinition, CallbackPhase,
-              SideEffectContext, SideEffectResult }    from './side-effects/types.js';
-export type { TagDefinition, TagOutcome }              from './tags/types.js';
-export type { StateEntry, TagOutcomeJson }             from './state/types.js';
-export type { SunobomohAPI }                          from './extension/api.js';
-export type { SchedulerState }                        from './scheduler/types.js';
+export type { WatcherDefinition, BoundWatcher } from './watchers/types.js';
+export type { HydratorDefinition } from './hydrators/types.js';
+export type {
+  SideEffectDefinition,
+  CallbackPhase,
+  SideEffectContext,
+  SideEffectResult,
+} from './side-effects/types.js';
+export type { TagDefinition, TagOutcome } from './tags/types.js';
+export type { StateEntry, TagOutcomeJson } from './state/types.js';
+export type { SunobomohAPI } from './extension/api.js';
+export type { SchedulerState } from './scheduler/types.js';
 
 // Values
-export { getSunobomoh }                               from './extension/api.js';
-export { UNKNOWN_OUTCOME_SCHEMA }                     from './tags/types.js';
+export { getSunobomoh } from './extension/api.js';
+export { UNKNOWN_OUTCOME_SCHEMA } from './tags/types.js';
 
 // Brand factories (consumers need these to construct typed ids)
-export type { WatcherId, TagId, ResourceUri,
-              IsoTimestamp, EntryId }                 from './core/brands.js';
-export { unsafeWatcherId, unsafeTagId,
-         toResourceUri, toIsoTimestamp }              from './core/brands.js';
+export type { WatcherId, TagId, ResourceUri, IsoTimestamp, EntryId } from './core/brands.js';
+export { unsafeWatcherId, unsafeTagId, toResourceUri, toIsoTimestamp } from './core/brands.js';
 
 // Result helpers (consumers use these in hydrators/side-effects)
-export type { Result }                                from './core/result.js';
-export { ok, err, isOk, isErr }                       from './core/result.js';
+export type { Result } from './core/result.js';
+export { ok, err, isOk, isErr } from './core/result.js';
 ```
 
 Everything else in `src/` is package-internal. Consumers MUST NOT import from deep paths

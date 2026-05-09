@@ -15,7 +15,7 @@ Every fallible domain operation returns `Result` instead of throwing. This elimi
 identical `try/catch` wrappers in WatcherRunner, HydrationPipeline, SideEffectExecutor,
 and Steerer — four modules that would otherwise duplicate the same error-wrapping shape.
 
-```typescript
+````typescript
 /**
  * Discriminated union for fallible operations.
  * Domain functions return Result; only the extension façade (src/extension/index.ts)
@@ -35,14 +35,14 @@ and Steerer — four modules that would otherwise duplicate the same error-wrapp
  * ```
  */
 export type Result<T, E = Error> =
-  | { readonly ok: true;  readonly value: T }
+  | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
-export const ok  = <T>(value: T): Result<T, never>  => ({ ok: true,  value });
-export const err = <E>(error: E): Result<never, E>   => ({ ok: false, error });
-export const isOk  = <T, E>(r: Result<T, E>): r is { ok: true;  value: T } => r.ok;
+export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+export const isOk = <T, E>(r: Result<T, E>): r is { ok: true; value: T } => r.ok;
 export const isErr = <T, E>(r: Result<T, E>): r is { ok: false; error: E } => !r.ok;
-```
+````
 
 **Rule**: Never `throw` inside domain logic (`src/` outside `extension/`).
 The façade is the single catch boundary.
@@ -57,7 +57,7 @@ Prevents mixing `string` IDs across domains at zero runtime cost.
 Validation happens once at the parse/construction boundary; downstream code never
 re-validates. All brands are plain strings in JSON — no special serialization.
 
-```typescript
+````typescript
 /**
  * @example
  * ```ts @import.meta.vitest
@@ -72,18 +72,17 @@ re-validates. All brands are plain strings in JSON — no special serialization.
  * expect(isOk(bad)).toBe(false);
  * ```
  */
-export type EntryId      = string & { readonly _brand: 'EntryId'      };
-export type WatcherId    = string & { readonly _brand: 'WatcherId'     };
-export type TagId        = string & { readonly _brand: 'TagId'         };
-export type IsoTimestamp = string & { readonly _brand: 'IsoTimestamp'  };
-export type ResourceUri  = string & { readonly _brand: 'ResourceUri'   };
+export type EntryId = string & { readonly _brand: 'EntryId' };
+export type WatcherId = string & { readonly _brand: 'WatcherId' };
+export type TagId = string & { readonly _brand: 'TagId' };
+export type IsoTimestamp = string & { readonly _brand: 'IsoTimestamp' };
+export type ResourceUri = string & { readonly _brand: 'ResourceUri' };
 
 import type { Result } from './result.js';
 import { ok, err } from './result.js';
 
 /** Cast a Date to IsoTimestamp. Accepts only Date objects — not raw strings. */
-export const toIsoTimestamp = (d: Date): IsoTimestamp =>
-  d.toISOString() as IsoTimestamp;
+export const toIsoTimestamp = (d: Date): IsoTimestamp => d.toISOString() as IsoTimestamp;
 
 /** Validate and brand a string as ResourceUri (RFC 3986, any scheme). */
 export const toResourceUri = (s: string): Result<ResourceUri> => {
@@ -93,10 +92,10 @@ export const toResourceUri = (s: string): Result<ResourceUri> => {
 };
 
 /** Unsafe cast — use only at trust boundaries (e.g., deserialising validated JSONL). */
-export const unsafeEntryId   = (s: string): EntryId      => s as EntryId;
-export const unsafeWatcherId = (s: string): WatcherId     => s as WatcherId;
-export const unsafeTagId     = (s: string): TagId         => s as TagId;
-```
+export const unsafeEntryId = (s: string): EntryId => s as EntryId;
+export const unsafeWatcherId = (s: string): WatcherId => s as WatcherId;
+export const unsafeTagId = (s: string): TagId => s as TagId;
+````
 
 ---
 
@@ -110,24 +109,24 @@ enabling deterministic test sequences without mocks or fake timers.
 
 **Why ULID over UUID v4:**
 
-| Property | UUID v4 | ULID (monotonic) |
-|---|---|---|
-| Sortable by time | ✗ | ✓ (48-bit ms timestamp prefix) |
-| Sub-ms ordering | ✗ | ✓ (random bits increment within same ms) |
-| JSONL natural order | random | insertion order = lexicographic order |
-| Length | 36 chars (with dashes) | 26 chars (Crockford base32) |
-| Collision safety | 122 random bits | 80 random bits + monotonic counter |
-| Offline generation | ✓ | ✓ |
+| Property            | UUID v4                | ULID (monotonic)                         |
+| ------------------- | ---------------------- | ---------------------------------------- |
+| Sortable by time    | ✗                      | ✓ (48-bit ms timestamp prefix)           |
+| Sub-ms ordering     | ✗                      | ✓ (random bits increment within same ms) |
+| JSONL natural order | random                 | insertion order = lexicographic order    |
+| Length              | 36 chars (with dashes) | 26 chars (Crockford base32)              |
+| Collision safety    | 122 random bits        | 80 random bits + monotonic counter       |
+| Offline generation  | ✓                      | ✓                                        |
 
 **"Extended randomness variable"**: The 80-bit random portion in a monotonic ULID serves
 dual duty — collision avoidance (randomness) and sub-millisecond ordering (counter).
-The random bits *extend* the 48-bit millisecond timestamp into finer-grained ordering,
+The random bits _extend_ the 48-bit millisecond timestamp into finer-grained ordering,
 hence "extended randomness." The `prng` parameter injects the random source, making
 the entire generation pipeline testable without `vi.useFakeTimers()`.
 
 **Dependency**: `ulid` npm package (`dependencies`, not `devDependencies`).
 
-```typescript
+````typescript
 import { monotonicFactory } from 'ulid';
 import type { EntryId } from './brands.js';
 
@@ -160,22 +159,23 @@ import type { EntryId } from './brands.js';
  */
 export interface IdFactory {
   next(): EntryId;
-  nextRaw(): string;  // unbranded — for patch ids, run ids in wire types
+  nextRaw(): string; // unbranded — for patch ids, run ids in wire types
 }
 
 export const createIdFactory = (prng?: () => number): IdFactory => {
   const generate = monotonicFactory(prng);
   return {
-    next:    () => generate() as EntryId,
+    next: () => generate() as EntryId,
     nextRaw: () => generate(),
   };
 };
 
 /** Process-level default factory. Use in production; inject createIdFactory(prng) in tests. */
 export const defaultIdFactory: IdFactory = createIdFactory();
-```
+````
 
 **Usage pattern in domain code**:
+
 ```typescript
 // toStateEntry() receives an IdFactory — injected, not imported directly
 export const toStateEntry = <TConfig, TEvent>(
@@ -183,7 +183,7 @@ export const toStateEntry = <TConfig, TEvent>(
   definition: WatcherDefinition<TConfig, TEvent>,
   config: TConfig,
   clock: Clock,
-  ids: IdFactory,          // ← injected alongside Clock
+  ids: IdFactory, // ← injected alongside Clock
 ): StateEntry => ({
   type: 'state_entry',
   id: ids.next(),
@@ -198,7 +198,7 @@ Pattern: **Generic Registry Factory**
 `WatcherRegistry` and `TagRegistry` are structurally identical Map-backed lookups.
 Implement once; domain files become 5-line wrappers.
 
-```typescript
+````typescript
 /**
  * @example
  * ```ts @import.meta.vitest
@@ -222,13 +222,15 @@ export interface Registry<T> {
 export const createRegistry = <T>(getId: (t: T) => string): Registry<T> => {
   const map = new Map<string, T>();
   return {
-    register: (item) => { map.set(getId(item), item); },
-    get:      (id)   => map.get(id),
-    getAll:   ()     => Array.from(map.values()),
-    has:      (id)   => map.has(id),
+    register: (item) => {
+      map.set(getId(item), item);
+    },
+    get: (id) => map.get(id),
+    getAll: () => Array.from(map.values()),
+    has: (id) => map.has(id),
   };
 };
-```
+````
 
 ---
 
@@ -239,7 +241,7 @@ Pattern: **Interface Segregation** / Hexagonal Ports
 The only I/O seams in the entire domain. Inject real implementations in production;
 inject inline objects in tests. **No `vi.mock()` is ever needed.**
 
-```typescript
+````typescript
 import type { IsoTimestamp } from './brands.js';
 
 /**
@@ -275,9 +277,11 @@ export interface Clock {
 }
 
 /** Node.js production implementations. */
-export const createNodeFileSystem = (): FileSystem => { /* node:fs/promises impl */ };
-export const createSystemClock    = (): Clock      => ({ now: () => toIsoTimestamp(new Date()) });
-```
+export const createNodeFileSystem = (): FileSystem => {
+  /* node:fs/promises impl */
+};
+export const createSystemClock = (): Clock => ({ now: () => toIsoTimestamp(new Date()) });
+````
 
 ---
 

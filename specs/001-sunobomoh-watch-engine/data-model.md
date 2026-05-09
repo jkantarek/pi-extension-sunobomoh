@@ -38,10 +38,10 @@ TagRegistry ──► initializeOutcomes()  (immutable fluent builder over ReadM
 There are two distinct shapes, kept separate to satisfy `noPropertyAccessFromIndexSignature`
 and to isolate JSON serialisation from domain logic.
 
-| Shape | Type name | Location | `outcomes` field | Use |
-|---|---|---|---|---|
-| JSONL wire | `StateEntryJson` | `src/state/types.ts` | `Record<string, TagOutcomeJson>` | Written to / read from disk |
-| In-memory | `StateEntry` | `src/state/types.ts` | `ReadonlyMap<TagId, TagOutcome>` | All domain logic, queries, scoring |
+| Shape      | Type name        | Location             | `outcomes` field                 | Use                                |
+| ---------- | ---------------- | -------------------- | -------------------------------- | ---------------------------------- |
+| JSONL wire | `StateEntryJson` | `src/state/types.ts` | `Record<string, TagOutcomeJson>` | Written to / read from disk        |
+| In-memory  | `StateEntry`     | `src/state/types.ts` | `ReadonlyMap<TagId, TagOutcome>` | All domain logic, queries, scoring |
 
 Conversion: `parseStateEntry(json: StateEntryJson): StateEntry` at the disk boundary only.
 
@@ -59,11 +59,11 @@ All id/uri/timestamp fields are plain `string` here — brands are type-level on
 ```typescript
 export interface StateEntryJson {
   readonly type: 'state_entry';
-  readonly id: string;                              // ULID (monotonic)
-  readonly sourceId: string;                        // WatcherDefinition.id
-  readonly sourceUri: string;                       // RFC 3986 URI (any scheme)
-  readonly label: string;                           // from WatcherDefinition.extractLabel()
-  readonly timestamp: string;                       // ISO 8601
+  readonly id: string; // ULID (monotonic)
+  readonly sourceId: string; // WatcherDefinition.id
+  readonly sourceUri: string; // RFC 3986 URI (any scheme)
+  readonly label: string; // from WatcherDefinition.extractLabel()
+  readonly timestamp: string; // ISO 8601
   readonly tags: readonly string[];
   readonly outcomes: Readonly<Record<string, TagOutcomeJson>>;
   readonly data: unknown;
@@ -97,8 +97,9 @@ export interface StatePatchJson {
   readonly id: string;
   readonly targetId: string;
   readonly timestamp: string;
-  readonly patch: Partial<Pick<StateEntryJson,
-    'needsAttention' | 'attentionScore' | 'outcomes' | 'tags'>>;
+  readonly patch: Partial<
+    Pick<StateEntryJson, 'needsAttention' | 'attentionScore' | 'outcomes' | 'tags'>
+  >;
   readonly reason?: string;
 }
 ```
@@ -132,11 +133,7 @@ export interface SchedulerRunJson {
   readonly durationMs: number;
 }
 
-export type StateLineJson =
-  | StateEntryJson
-  | StatePatchJson
-  | SteeringRunJson
-  | SchedulerRunJson;
+export type StateLineJson = StateEntryJson | StatePatchJson | SteeringRunJson | SchedulerRunJson;
 ```
 
 ---
@@ -155,10 +152,10 @@ export interface StateEntry {
   readonly id: EntryId;
   readonly sourceId: WatcherId;
   readonly sourceUri: ResourceUri;
-  readonly label: string;                          // human-readable display name for TUI
+  readonly label: string; // human-readable display name for TUI
   readonly timestamp: IsoTimestamp;
   readonly tags: readonly TagId[];
-  readonly outcomes: ReadonlyMap<TagId, TagOutcome>;   // Map, not Record
+  readonly outcomes: ReadonlyMap<TagId, TagOutcome>; // Map, not Record
   readonly data: unknown;
   readonly hydratedData?: unknown;
   readonly needsAttention: boolean;
@@ -189,20 +186,20 @@ All indexes use `Map` — never `Record` — to satisfy `noPropertyAccessFromInd
 
 ```typescript
 export interface ReadModel {
-  readonly byId:          ReadonlyMap<EntryId, StateEntry>;
-  readonly byTag:         ReadonlyMap<TagId,     readonly EntryId[]>;
-  readonly bySourceId:    ReadonlyMap<WatcherId,  readonly EntryId[]>;
+  readonly byId: ReadonlyMap<EntryId, StateEntry>;
+  readonly byTag: ReadonlyMap<TagId, readonly EntryId[]>;
+  readonly bySourceId: ReadonlyMap<WatcherId, readonly EntryId[]>;
   readonly needsAttention: ReadonlySet<EntryId>;
   readonly lastSteeringRun?: SteeringRunJson;
-  readonly entryCount:    number;
+  readonly entryCount: number;
 }
 
 export const emptyModel = (): ReadModel => ({
-  byId:           new Map(),
-  byTag:          new Map(),
-  bySourceId:     new Map(),
+  byId: new Map(),
+  byTag: new Map(),
+  bySourceId: new Map(),
   needsAttention: new Set(),
-  entryCount:     0,
+  entryCount: 0,
 });
 
 // Pure fold function — the entire state reconstitution logic.
@@ -285,18 +282,18 @@ export interface TagDefinition {
   readonly defaultStatus: TagOutcome['status'];
   /** Always present. Set to UNKNOWN_OUTCOME_SCHEMA if no specific shape is needed. */
   readonly outcomeSchema: TSchema;
-  readonly attentionWeight: number;           // 0–10; used in scoring
+  readonly attentionWeight: number; // 0–10; used in scoring
 }
 ```
 
 **Built-in tags** (registered by `createTagRegistry()` automatically):
 
-| id | label | weight | outcomeSchema |
-|----|-------|--------|---------------|
-| `urgent` | Urgent | 10 | `UNKNOWN_OUTCOME_SCHEMA` |
-| `needs-review` | Needs Review | 7 | `UNKNOWN_OUTCOME_SCHEMA` |
-| `informational` | Informational | 1 | `UNKNOWN_OUTCOME_SCHEMA` |
-| `stale` | Stale | 0 | `UNKNOWN_OUTCOME_SCHEMA` |
+| id              | label         | weight | outcomeSchema            |
+| --------------- | ------------- | ------ | ------------------------ |
+| `urgent`        | Urgent        | 10     | `UNKNOWN_OUTCOME_SCHEMA` |
+| `needs-review`  | Needs Review  | 7      | `UNKNOWN_OUTCOME_SCHEMA` |
+| `informational` | Informational | 1      | `UNKNOWN_OUTCOME_SCHEMA` |
+| `stale`         | Stale         | 0      | `UNKNOWN_OUTCOME_SCHEMA` |
 
 ### SideEffectDefinition
 
@@ -307,9 +304,12 @@ Pattern: **Chain of Responsibility**. `runPhase()` is a pure function — no cla
 import type { WatcherId } from '../core/brands.js';
 
 export type CallbackPhase =
-  | 'before_watch'   | 'after_watch'
-  | 'before_hydrate' | 'after_hydrate'
-  | 'before_steer'   | 'after_steer';
+  | 'before_watch'
+  | 'after_watch'
+  | 'before_hydrate'
+  | 'after_hydrate'
+  | 'before_steer'
+  | 'after_steer';
 
 export interface SideEffectContext {
   readonly phase: CallbackPhase;
@@ -332,14 +332,14 @@ export interface SideEffectDefinition {
 
 **Active Record analogy**:
 
-| Active Record | Sunobomoh |
-|---|---|
-| `before_save` | `before_watch` |
-| `after_save` | `after_watch` |
-| `before_validation` | `before_hydrate` |
-| `after_validation` | `after_hydrate` |
-| `before_destroy` | `before_steer` |
-| `after_destroy` | `after_steer` |
+| Active Record                  | Sunobomoh               |
+| ------------------------------ | ----------------------- |
+| `before_save`                  | `before_watch`          |
+| `after_save`                   | `after_watch`           |
+| `before_validation`            | `before_hydrate`        |
+| `after_validation`             | `after_hydrate`         |
+| `before_destroy`               | `before_steer`          |
+| `after_destroy`                | `after_steer`           |
 | `throw ActiveRecord::Rollback` | `return { halt: true }` |
 
 ### HydratorDefinition
@@ -352,14 +352,12 @@ export interface HydratorDefinition {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  hydrate(
-    entries: readonly StateEntry[],
-    signal: AbortSignal
-  ): Promise<readonly StateEntry[]>;
+  hydrate(entries: readonly StateEntry[], signal: AbortSignal): Promise<readonly StateEntry[]>;
 }
 ```
 
 **Invariants** (enforced by `assertHydrationInvariants()` in `src/hydrators/invariants.ts`):
+
 - `result.length === input.length`
 - `result[i].id === input[i].id` for all `i`
 - `result[i].sourceId`, `.sourceUri`, `.timestamp` unchanged
@@ -368,10 +366,10 @@ export interface HydratorDefinition {
 
 ```typescript
 export interface SchedulerConfig {
-  readonly intervalMinutes: number;            // default: 10
-  readonly steeringIntervalMinutes: number;    // default: 60 — must be multiple of intervalMinutes
-  readonly maxConcurrentWatchers: number;      // default: 3
-  readonly timeoutMs: number;                  // per-watcher, default: 30_000
+  readonly intervalMinutes: number; // default: 10
+  readonly steeringIntervalMinutes: number; // default: 60 — must be multiple of intervalMinutes
+  readonly maxConcurrentWatchers: number; // default: 3
+  readonly timeoutMs: number; // per-watcher, default: 30_000
 }
 ```
 
@@ -385,17 +383,18 @@ in `src/scheduler/should-steer.ts`.
 import type { LlmSteeringStrategy } from '../steering/types.js';
 
 export interface SteeringConfig {
-  readonly promoteThreshold: number;           // default: 60
-  readonly demoteThreshold: number;            // default: 20
-  readonly recencyDecayHalfLifeHours: number;  // default: 24
-  readonly llmSteering: boolean;               // default: false
-  readonly llmBorderlineLimit: number;         // default: 10
+  readonly promoteThreshold: number; // default: 60
+  readonly demoteThreshold: number; // default: 20
+  readonly recencyDecayHalfLifeHours: number; // default: 24
+  readonly llmSteering: boolean; // default: false
+  readonly llmBorderlineLimit: number; // default: 10
 }
 ```
 
 **Scoring formula**: `score = Σ(tag.attentionWeight × 10) × 0.5^(ageHours / halfLife)`
 
 **Specification predicates** (`src/steering/classify.ts`):
+
 - `isPromotable(score, config): boolean`
 - `isDemotable(score, config): boolean`
 - `isBorderline(score, config): boolean`
@@ -449,13 +448,14 @@ export type GroupingStrategyName = 'none' | 'source' | 'tag' | 'date' | 'attenti
 
 **Default `WidgetUserConfig`** (applied by `buildWidgetConfig()` in `extension/index.ts`):
 
-| Field | Default |
-|---|---|
-| `maxLines` | `8` |
-| `grouping` | `'none'` |
-| `tagEmoji` | `{}` (empty — DEFAULT_TAG_EMOJI used as-is) |
+| Field            | Default                                           |
+| ---------------- | ------------------------------------------------- |
+| `maxLines`       | `8`                                               |
+| `grouping`       | `'none'`                                          |
+| `tagEmoji`       | `{}` (empty — DEFAULT_TAG_EMOJI used as-is)       |
 | `schemeProfiles` | `{}` (empty — DEFAULT_SCHEME_PROFILES used as-is) |
-```
+
+````
 
 ### RegisteredWatcherInfo
 
@@ -476,7 +476,7 @@ export interface RegisteredWatcherInfo {
   readonly lastRunError?: string;
   readonly entryCount: number;
 }
-```
+````
 
 ### BuiltinWatcherEntry
 
@@ -484,9 +484,9 @@ One entry in the `BuiltinWatcherBundle` map. Used by the Add flow in `/sunobomoh
 
 ```typescript
 export interface BuiltinWatcherEntry {
-  readonly id: string;               // matches WatcherDefinition.id
-  readonly name: string;             // display name
-  readonly description: string;      // one sentence for the selection list
+  readonly id: string; // matches WatcherDefinition.id
+  readonly name: string; // display name
+  readonly description: string; // one sentence for the selection list
   readonly definition: WatcherDefinition;
 }
 ```
@@ -495,17 +495,17 @@ export interface BuiltinWatcherEntry {
 
 ## Validation Rules
 
-| Field | Rule | Where enforced |
-|---|---|---|
-| `StateEntry.id` | ULID (monotonic, 26-char Crockford base32) | `parseStateEntry()` at deserialisation boundary |
-| `StateEntry.sourceUri` | RFC 3986 via `toResourceUri()` | `toStateEntry()` coercion in `coerce.ts` |
-| `StateEntry.timestamp` | Valid ISO 8601 via `toIsoTimestamp()` | `toStateEntry()` |
-| `StateEntry.tags` | Non-empty; each TagId in TagRegistry | `applyTagsToEntry()` |
-| `StateEntry.attentionScore` | 0–100 | `scoreEntry()` |
-| `TagOutcome.status` | One of four literals | TypeBox at outcome initialisation |
-| `TagOutcome.outcome` | Validates against `TagDefinition.outcomeSchema` | `initializeOutcomes()` |
-| `SchedulerConfig.steeringIntervalMinutes` | Positive multiple of `intervalMinutes` | `createScheduler()` |
-| `SteeringConfig.promoteThreshold` | > `demoteThreshold` | `createSteerer()` |
+| Field                                     | Rule                                            | Where enforced                                  |
+| ----------------------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| `StateEntry.id`                           | ULID (monotonic, 26-char Crockford base32)      | `parseStateEntry()` at deserialisation boundary |
+| `StateEntry.sourceUri`                    | RFC 3986 via `toResourceUri()`                  | `toStateEntry()` coercion in `coerce.ts`        |
+| `StateEntry.timestamp`                    | Valid ISO 8601 via `toIsoTimestamp()`           | `toStateEntry()`                                |
+| `StateEntry.tags`                         | Non-empty; each TagId in TagRegistry            | `applyTagsToEntry()`                            |
+| `StateEntry.attentionScore`               | 0–100                                           | `scoreEntry()`                                  |
+| `TagOutcome.status`                       | One of four literals                            | TypeBox at outcome initialisation               |
+| `TagOutcome.outcome`                      | Validates against `TagDefinition.outcomeSchema` | `initializeOutcomes()`                          |
+| `SchedulerConfig.steeringIntervalMinutes` | Positive multiple of `intervalMinutes`          | `createScheduler()`                             |
+| `SteeringConfig.promoteThreshold`         | > `demoteThreshold`                             | `createSteerer()`                               |
 
 ---
 
@@ -513,10 +513,10 @@ export interface BuiltinWatcherEntry {
 
 All `Map` — never `Record` — to satisfy `noPropertyAccessFromIndexSignature`.
 
-| Index | Type | Key | Purpose |
-|---|---|---|---|
-| `ReadModel.byId` | `Map<EntryId, StateEntry>` | entry id | O(1) patch lookup, mark tool |
-| `ReadModel.byTag` | `Map<TagId, EntryId[]>` | tag id | O(1) tag filtering |
-| `ReadModel.bySourceId` | `Map<WatcherId, EntryId[]>` | watcher id | O(1) per-watcher history |
-| `ReadModel.needsAttention` | `Set<EntryId>` | — | O(1) widget count |
-| `ReadModel.lastSteeringRun` | `SteeringRunJson \| undefined` | — | steering interval check |
+| Index                       | Type                           | Key        | Purpose                      |
+| --------------------------- | ------------------------------ | ---------- | ---------------------------- |
+| `ReadModel.byId`            | `Map<EntryId, StateEntry>`     | entry id   | O(1) patch lookup, mark tool |
+| `ReadModel.byTag`           | `Map<TagId, EntryId[]>`        | tag id     | O(1) tag filtering           |
+| `ReadModel.bySourceId`      | `Map<WatcherId, EntryId[]>`    | watcher id | O(1) per-watcher history     |
+| `ReadModel.needsAttention`  | `Set<EntryId>`                 | —          | O(1) widget count            |
+| `ReadModel.lastSteeringRun` | `SteeringRunJson \| undefined` | —          | steering interval check      |

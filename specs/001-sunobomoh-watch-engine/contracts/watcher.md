@@ -10,7 +10,7 @@ Patterns: **Strategy** (WatcherDefinition), **Generic Registry** (thin wrapper o
 
 ## `src/watchers/types.ts`
 
-```typescript
+````typescript
 import type { TSchema } from 'typebox';
 import type { WatcherId, TagId, ResourceUri } from '../core/brands.js';
 import type { HydratorDefinition } from '../hydrators/types.js';
@@ -64,7 +64,7 @@ export interface BoundWatcher<TConfig = unknown> {
   readonly definition: WatcherDefinition<TConfig>;
   readonly config: TConfig;
 }
-```
+````
 
 ---
 
@@ -77,8 +77,7 @@ The entire file is ~8 non-comment lines.
 import { createRegistry } from '../core/registry.js';
 import type { BoundWatcher } from './types.js';
 
-export const createWatcherRegistry = () =>
-  createRegistry<BoundWatcher>(w => w.definition.id);
+export const createWatcherRegistry = () => createRegistry<BoundWatcher>((w) => w.definition.id);
 ```
 
 ---
@@ -88,7 +87,7 @@ export const createWatcherRegistry = () =>
 Pattern: **Pure Function** + **Railway-Oriented Programming**.
 `runWatcher` is a standalone exported function — no class, no instance state.
 
-```typescript
+````typescript
 import type { Result } from '../core/result.js';
 import type { Clock } from '../core/ports.js';
 import type { StateEntry } from '../state/types.js';
@@ -132,7 +131,7 @@ export declare const runWatcher: (
   clock: Clock,
   signal: AbortSignal,
 ) => Promise<Result<readonly StateEntry[], WatcherRunError>>;
-```
+````
 
 ---
 
@@ -140,7 +139,7 @@ export declare const runWatcher: (
 
 Extracted separately so it can be doctested independently of the runner's async complexity.
 
-```typescript
+````typescript
 import type { Clock } from '../core/ports.js';
 import type { IdFactory } from '../core/ids.js';
 import type { WatcherDefinition } from './types.js';
@@ -183,7 +182,7 @@ export declare const toStateEntry: <TConfig, TEvent>(
   clock: Clock,
   ids: IdFactory,
 ) => StateEntry;
-```
+````
 
 ---
 

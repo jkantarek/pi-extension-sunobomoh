@@ -12,6 +12,7 @@ All `NEEDS CLARIFICATION` items from Technical Context have been resolved here.
 (configurable via `sunobomoh.stateFile` in `.pi/settings.json`).
 
 **Rationale**:
+
 - pi itself uses JSONL for session storage — same tooling familiarity
 - Append-only means no lock contention between watcher runs
 - Trivial to `tail -f`, grep, or pipe into any other tool
@@ -19,6 +20,7 @@ All `NEEDS CLARIFICATION` items from Technical Context have been resolved here.
 - Index built in-memory at load time for O(1) lookups by id
 
 **Alternatives considered**:
+
 - SQLite: higher fidelity queries but adds a native dependency (`better-sqlite3`),
   conflicts with pi's no-native-deps posture, and is overkill for thousands of entries.
 - JSON single file: rewriting on every append kills performance and creates race conditions.
@@ -36,12 +38,14 @@ All `NEEDS CLARIFICATION` items from Technical Context have been resolved here.
 `WatcherDefinition<TConfig, TEvent>` interface. No abstract base class.
 
 **Rationale**:
+
 - Composable: hydrators and side-effects are arrays, not inheritance chains.
 - Independently testable: each function in the object can be tested in isolation.
 - TypeBox schema for `configSchema` gives runtime validation for free.
 - Matches pi's own tool registration pattern (`pi.registerTool(def)` takes a plain object).
 
 **Alternatives considered**:
+
 - Abstract class `BaseWatcher`: adds coupling, makes tree-shaking harder, and conflicts
   with the AGENTS.md "one public concern per file" rule (base class bleeds concerns).
 
@@ -53,11 +57,13 @@ All `NEEDS CLARIFICATION` items from Technical Context have been resolved here.
 Each hydrator receives the entries array as enriched by all previous hydrators.
 
 **Rationale**:
+
 - Avoids race conditions where hydrator B overwrites hydrator A's `hydratedData`.
 - Simpler error propagation: if hydrator N fails, hydrators N+1..M are skipped.
 - Predictable for the user: order in the array is execution order.
 
 **Alternatives considered**:
+
 - Parallel hydration with merge: complex merge semantics, easy to create lost-update bugs.
 - DAG-based hydration: necessary only if hydrators have declared dependencies —
   YAGNI until a concrete use case demands it.
@@ -71,6 +77,7 @@ array. Two pure functions execute them: `phaseHandlers(phase, defs)` (filter) an
 `runPhase(phase, defs, ctx)` (Chain of Responsibility loop). No `SideEffectExecutor` class.
 
 **Rationale**:
+
 - Self-contained per watcher: a GitHub watcher can declare its own Slack notification
   side-effect without any global registry magic.
 - Configurable order: index in the array is execution order within a phase.
@@ -80,6 +87,7 @@ array. Two pure functions execute them: `phaseHandlers(phase, defs)` (filter) an
   all outputs are in the `Result` return. Directly testable by passing arrays of definitions.
 
 **Alternatives considered**:
+
 - Global event bus side-effects: harder to reason about which watcher triggered what;
   makes testing require global state.
 - Decorator-style (`@BeforeHydrate`): TypeScript decorators are still experimental
@@ -94,22 +102,24 @@ array. Two pure functions execute them: `phaseHandlers(phase, defs)` (filter) an
 **Decision**: All `sourceUri` and external resource links are RFC 3986 URIs.
 Custom schemes registered per watcher type:
 
-| Source | URI Scheme | Example |
-|--------|-----------|---------|
-| GitHub | `github:` | `github:///owner/repo/issues/123` |
-| Gmail | `gmail:` | `gmail:///user@example.com/thread/abc123` |
-| Slack | `slack:` | `slack:///workspace/C01ABC/p1234567890` |
-| Filesystem | `file:` | `file:///home/user/project/src/main.ts` |
-| Browser tab | `browser:` | `browser:///chrome/tab/12345` |
-| Git | `git:` | `git:///github.com/owner/repo.git/commit/abc` |
+| Source      | URI Scheme | Example                                       |
+| ----------- | ---------- | --------------------------------------------- |
+| GitHub      | `github:`  | `github:///owner/repo/issues/123`             |
+| Gmail       | `gmail:`   | `gmail:///user@example.com/thread/abc123`     |
+| Slack       | `slack:`   | `slack:///workspace/C01ABC/p1234567890`       |
+| Filesystem  | `file:`    | `file:///home/user/project/src/main.ts`       |
+| Browser tab | `browser:` | `browser:///chrome/tab/12345`                 |
+| Git         | `git:`     | `git:///github.com/owner/repo.git/commit/abc` |
 
 **Rationale**:
+
 - RFC 3986 gives a well-defined syntax that is not HTTP-limited.
 - Custom schemes are legal per the spec and clearly communicate the resource type.
 - String type is sufficient — no need for a `URL` object at the domain level.
 - JSONL stores them as plain strings; no special serialization.
 
 **Alternatives considered**:
+
 - Opaque string IDs: loses semantics, hard to deep-link from TUI/browser.
 - Forcing `https://` with custom paths: conflicts with the brief's explicit "not HTTP limited".
 
@@ -118,6 +128,7 @@ Custom schemes registered per watcher type:
 ## Decision 6: Steering Intelligence — Rule-Based Default + Opt-in LLM
 
 **Decision**:
+
 - **Default**: Steerer uses a configurable scoring function. Score = sum of per-tag
   weights + recency decay. Entries above `config.promoteThreshold` get
   `needsAttention = true`; entries below `config.demoteThreshold` get `needsAttention = false`.
@@ -126,12 +137,14 @@ Custom schemes registered per watcher type:
   asking the LLM to review borderline cases and override scores.
 
 **Rationale**:
+
 - Rule-based works offline and is deterministic — good for CI/automation.
 - LLM adds value for ambiguous entries (e.g., "is this PR review actually urgent?").
 - `deliverAs: "steer"` ensures the steering message is processed between tool calls
   without blocking the main user workflow.
 
 **Alternatives considered**:
+
 - LLM-only steering: too slow for 10-minute polling cycles; fails offline.
 - No LLM integration: misses the core value of a pi extension (AI augmentation).
 
@@ -145,6 +158,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
 `Value.Check(def.outcomeSchema, value)` without a null guard.
 
 **Rationale**:
+
 - Null Object pattern: eliminates `if (def.outcomeSchema)` guards throughout the codebase.
 - `Type.Unknown()` always passes validation, which is correct for free-form outcomes.
 - TypeBox is already imported; the sentinel is one line.
@@ -152,6 +166,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
   change required at their call sites if a specific schema is later added.
 
 **Alternatives considered**:
+
 - Optional field `outcomeSchema?: TSchema`: forces null checks in every consumer.
 - Separate tagged union for "typed" vs "untyped" TagDefinition: overengineers what
   is a one-line sentinel value.
@@ -161,6 +176,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
 ## Decision 8: Scheduler State — Self-Scheduling setTimeout + pi.appendEntry Heartbeats
 
 **Decision**:
+
 - **Timer**: Self-scheduling `setTimeout` (not `setInterval`). After each tick completes,
   the next timeout is queued. Drift = only the actual work duration, not interval callback lag.
 - **Clock injection**: The `Clock` port (`src/core/ports.ts`) is injected into `createScheduler()`.
@@ -171,6 +187,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
   a recovery checkpoint. The StateStore also writes a `scheduler_run` line for long-term history.
 
 **Rationale**:
+
 - `setInterval` drifts and requires `vi.useFakeTimers()` — a mock — to test. Both are prohibited.
 - `shouldRunSteering` in its own file means all boundary conditions are doctest-able without
   starting a real scheduler.
@@ -178,6 +195,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
   `/fork`, `/resume`, and session restart.
 
 **Alternatives considered**:
+
 - `setInterval` with a second interval for steering: two timers drifting independently;
   requires fake timers to test.
 - Polling a cron expression: adds a dependency; more complexity than a single predicate.
@@ -191,6 +209,7 @@ When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Ty
 Tests pass real inline implementations (3-5 line objects) against temp files and fixed dates.
 
 **Rationale**:
+
 - No mocks required: AGENTS.md prohibits them. Every I/O seam is behind a 1–3 method interface.
 - 98% coverage is achievable because every code path is reachable through the public API.
 - Inline test implementations are self-documenting — no hidden `__mocks__` directories.
@@ -204,12 +223,14 @@ Only `src/extension/index.ts` (the façade) catches errors and converts them to
 `ctx.ui.notify` calls.
 
 **Rationale**:
+
 - Eliminates identical `try/catch` blocks in four modules (WatcherRunner, HydrationPipeline,
   SideEffectExecutor, Steerer).
 - Makes all failure paths explicit and statically typed.
 - The extension façade is the single error boundary — consistent user-facing error messages.
 
 **Alternatives considered**:
+
 - Throwing typed errors: forces `try/catch` in every caller; TypeScript does not type
   thrown exceptions, so callers cannot know what errors to expect.
 - `neverthrow` or `fp-ts`: external dependencies; `Result<T,E>` is 6 lines, not a package.
@@ -223,12 +244,14 @@ Only `src/extension/index.ts` (the façade) catches errors and converts them to
 at the parse/construction boundary. Plain `string` in JSONL wire types only.
 
 **Rationale**:
+
 - Prevents ID mix-ups (passing a `WatcherId` where `EntryId` is expected) at compile time.
 - Zero runtime cost — brands are type-level only.
 - Eliminates defensive re-validation code scattered across domain functions.
 - `toResourceUri()` validates RFC 3986 syntax once; all downstream code trusts the brand.
 
 **Alternatives considered**:
+
 - Plain `string` everywhere: no compile-time protection; defensive checks spread throughout.
 - Runtime wrapper objects (`class EntryId { constructor(readonly value: string) {} }`):
   adds serialization complexity; JSON.stringify produces `{"value":"..."}` not `"..."`.
@@ -241,11 +264,13 @@ at the parse/construction boundary. Plain `string` in JSONL wire types only.
 `src/core/registry.ts`. Domain-specific registry files are ~8-line wrappers.
 
 **Rationale**:
+
 - The two registries are structurally identical: a `Map`-backed `register/get/getAll/has` API.
 - Implementing twice would be a direct AGENTS.md violation (duplication trigger).
 - `createRegistry<T>(getId)` is 10 lines; the domain wrappers add only the type constraint.
 
 **Alternatives considered**:
+
 - Separate implementations per domain: identical boilerplate, violates DRY.
 - Class-based registry: adds `new` instantiation with no benefit over a factory function.
 
@@ -259,12 +284,14 @@ at the parse/construction boundary. Plain `string` in JSONL wire types only.
 `parseStateEntry()` is the single conversion point, called only inside `StateStore.load()`.
 
 **Rationale**:
+
 - `noPropertyAccessFromIndexSignature` forbids `entry.outcomes[tagId]` on a `Record`-typed
   field. `ReadonlyMap<TagId, TagOutcome>` uses `.get(tagId)` — always legal.
 - Brands cannot be serialised directly to JSON without a conversion step.
 - A single conversion boundary is easier to audit than scattered casts.
 
 **Alternatives considered**:
+
 - Single type with `Record` and `as` casts: compiles but hides the constraint violation.
 - `Map` in JSONL: not JSON-serialisable natively; requires custom replacer/reviver.
 
@@ -282,6 +309,7 @@ application to `TagDefinition.outcomeSchema`.
 (the "extended randomness variable") supplied via the `IdFactory` port in `src/core/ids.ts`.
 
 **Rationale**:
+
 - **Time-sortable**: ULID's 48-bit millisecond prefix means JSONL entries sort
   lexicographically in insertion order — no secondary sort by timestamp needed.
 - **Monotonic within a millisecond**: burst inserts during one scheduler tick are
@@ -304,6 +332,7 @@ a port — the same pattern as `FileSystem` and `Clock`. `IdFactory` is injected
 `defaultIdFactory` is a process-level singleton using `crypto.getRandomValues`.
 
 **Alternatives considered**:
+
 - **UUID v4** (`crypto.randomUUID()`): no temporal ordering, 36 chars, no injectable prng in
   Node's built-in — would require `vi.useFakeTimers()` or a separate abstraction for tests.
 - **NanoID**: shorter but not time-sortable; no monotonic mode.
@@ -314,11 +343,11 @@ a port — the same pattern as `FileSystem` and `Clock`. `IdFactory` is injected
 
 ## Open Questions (resolved)
 
-| Question | Resolution |
-|----------|-----------|
-| One state file per project or per watcher? | One per project at `.pi/sunobomoh-state.jsonl` |
-| Are watchers bundled or external packages? | Bundled reference impls; extension authors add their own |
-| Auth model for external watchers? | Config object per watcher; API keys via env vars |
-| Max state file size? | Configurable `maxBytes` (default 50 MB); old entries archived to `.pi/sunobomoh-archive/` |
-| Should needsAttention persist across sessions? | Yes — it lives in the JSONL file, not session tree |
-| Tag outcomes typed or free-form? | Typed per-tag via TypeBox schema; `unknown` if no schema |
+| Question                                       | Resolution                                                                                |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| One state file per project or per watcher?     | One per project at `.pi/sunobomoh-state.jsonl`                                            |
+| Are watchers bundled or external packages?     | Bundled reference impls; extension authors add their own                                  |
+| Auth model for external watchers?              | Config object per watcher; API keys via env vars                                          |
+| Max state file size?                           | Configurable `maxBytes` (default 50 MB); old entries archived to `.pi/sunobomoh-archive/` |
+| Should needsAttention persist across sessions? | Yes — it lives in the JSONL file, not session tree                                        |
+| Tag outcomes typed or free-form?               | Typed per-tag via TypeBox schema; `unknown` if no schema                                  |

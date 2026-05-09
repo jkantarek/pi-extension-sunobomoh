@@ -10,7 +10,7 @@ Patterns: **Self-Scheduling setTimeout** (Scheduler), **Specification** (shouldR
 
 ## `src/scheduler/types.ts`
 
-```typescript
+````typescript
 import type { IsoTimestamp } from '../core/brands.js';
 
 /**
@@ -23,10 +23,10 @@ import type { IsoTimestamp } from '../core/brands.js';
  * ```
  */
 export interface SchedulerConfig {
-  readonly intervalMinutes: number;           // default: 10
-  readonly steeringIntervalMinutes: number;   // default: 60 — must be positive multiple of intervalMinutes
-  readonly maxConcurrentWatchers: number;     // default: 3
-  readonly timeoutMs: number;                 // per-watcher abort timeout; default: 30_000
+  readonly intervalMinutes: number; // default: 10
+  readonly steeringIntervalMinutes: number; // default: 60 — must be positive multiple of intervalMinutes
+  readonly maxConcurrentWatchers: number; // default: 3
+  readonly timeoutMs: number; // per-watcher abort timeout; default: 30_000
 }
 
 export interface SchedulerState {
@@ -46,7 +46,7 @@ export interface SchedulerAPI {
   triggerSteering(): Promise<void>;
   readonly state: SchedulerState;
 }
-```
+````
 
 ---
 
@@ -55,7 +55,7 @@ export interface SchedulerAPI {
 Pattern: **Specification** — a single pure predicate extracted to its own file.
 All timer-interval boundary conditions are doctestable without starting a scheduler.
 
-```typescript
+````typescript
 import type { IsoTimestamp } from '../core/brands.js';
 import type { SchedulerConfig } from './types.js';
 
@@ -92,7 +92,7 @@ export declare const shouldRunSteering: (
   now: IsoTimestamp,
   config: SchedulerConfig,
 ) => boolean;
-```
+````
 
 ---
 
@@ -102,16 +102,16 @@ Pattern: **Self-Scheduling setTimeout** (not setInterval — avoids drift).
 **Template Method via injection** — the tick structure is fixed; watcher execution and
 steering are injected strategies. **Clock port** is injected — no `vi.useFakeTimers()` needed.
 
-```typescript
+````typescript
 import type { Result } from '../core/result.js';
 import type { Clock } from '../core/ports.js';
 import type { StateEntry } from '../state/types.js';
 import type { WatcherId } from '../core/brands.js';
 
-export type WatcherRunnerFn = (signal: AbortSignal) =>
-  Promise<Result<readonly StateEntry[], Error>>;
-export type SteeringFn = (signal: AbortSignal) =>
-  Promise<Result<void, Error>>;
+export type WatcherRunnerFn = (
+  signal: AbortSignal,
+) => Promise<Result<readonly StateEntry[], Error>>;
+export type SteeringFn = (signal: AbortSignal) => Promise<Result<void, Error>>;
 
 export const DEFAULT_SCHEDULER_CONFIG: SchedulerConfig = {
   intervalMinutes: 10,
@@ -144,9 +144,10 @@ export declare const createScheduler: (
   runSteering: SteeringFn,
   clock: Clock,
 ) => SchedulerAPI;
-```
+````
 
 **Self-scheduling pattern** (internal, not exported):
+
 ```typescript
 const tick = async (): Promise<void> => {
   await runWatchers(signal);
@@ -158,6 +159,7 @@ const tick = async (): Promise<void> => {
   }
 };
 ```
+
 This reschedules after work completes, so wall-clock drift accumulates only from
 actual work duration — never from interval callback queuing lag.
 
@@ -171,18 +173,18 @@ import type { StateEntry } from '../state/types.js';
 import type { Result } from '../core/result.js';
 
 export interface SteeringConfig {
-  readonly promoteThreshold: number;           // default: 60
-  readonly demoteThreshold: number;            // default: 20 — must be < promoteThreshold
-  readonly recencyDecayHalfLifeHours: number;  // default: 24; Infinity disables decay
-  readonly llmSteering: boolean;               // default: false
-  readonly llmBorderlineLimit: number;         // default: 10 — max entries sent to LLM
+  readonly promoteThreshold: number; // default: 60
+  readonly demoteThreshold: number; // default: 20 — must be < promoteThreshold
+  readonly recencyDecayHalfLifeHours: number; // default: 24; Infinity disables decay
+  readonly llmSteering: boolean; // default: false
+  readonly llmBorderlineLimit: number; // default: 10 — max entries sent to LLM
 }
 
 export interface AttentionScore {
   readonly entryId: EntryId;
-  readonly score: number;                      // 0–100
+  readonly score: number; // 0–100
   readonly breakdown: readonly { tagId: string; contribution: number }[];
-  readonly recencyFactor: number;              // 0–1
+  readonly recencyFactor: number; // 0–1
   readonly decision: 'promote' | 'demote' | 'borderline';
 }
 
@@ -193,9 +195,9 @@ export interface LlmOverride {
 }
 
 export interface SteeringResult {
-  readonly promoted:     readonly EntryId[];
-  readonly demoted:      readonly EntryId[];
-  readonly borderline:   readonly EntryId[];
+  readonly promoted: readonly EntryId[];
+  readonly demoted: readonly EntryId[];
+  readonly borderline: readonly EntryId[];
   readonly llmOverrides: readonly LlmOverride[];
 }
 
@@ -218,7 +220,7 @@ export interface SteererAPI {
 
 ## `src/steering/score-entry.ts` — Pure Scoring Function
 
-```typescript
+````typescript
 import type { IsoTimestamp } from '../core/brands.js';
 import type { StateEntry } from '../state/types.js';
 import type { TagDefinition } from '../tags/types.js';
@@ -252,7 +254,7 @@ export declare const scoreEntry: (
   config: SteeringConfig,
   now: IsoTimestamp,
 ) => AttentionScore;
-```
+````
 
 ---
 
@@ -260,7 +262,7 @@ export declare const scoreEntry: (
 
 Three one-liner predicates. No `switch`, no nested ternary. Consumed directly by `steerer.ts`.
 
-```typescript
+````typescript
 import type { AttentionScore } from './types.js';
 import type { SteeringConfig } from './types.js';
 
@@ -281,13 +283,13 @@ import type { SteeringConfig } from './types.js';
  * expect(isDemotable(middle, cfg)).toBe(false);
  * ```
  */
-export const isPromotable  = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isPromotable = (s: AttentionScore, c: SteeringConfig): boolean =>
   s.score >= c.promoteThreshold;
-export const isDemotable   = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isDemotable = (s: AttentionScore, c: SteeringConfig): boolean =>
   s.score <= c.demoteThreshold;
-export const isBorderline  = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isBorderline = (s: AttentionScore, c: SteeringConfig): boolean =>
   !isPromotable(s, c) && !isDemotable(s, c);
-```
+````
 
 ---
 
@@ -296,7 +298,7 @@ export const isBorderline  = (s: AttentionScore, c: SteeringConfig): boolean =>
 Pattern: **Strategy** for LLM path (injected, optional).
 **Factory Function** — `createSteerer()` replaces a class.
 
-```typescript
+````typescript
 import type { Clock } from '../core/ports.js';
 import type { Registry } from '../core/registry.js';
 import type { TagDefinition } from '../tags/types.js';
@@ -336,12 +338,13 @@ export declare const createSteerer: (
   config: SteeringConfig,
   tagRegistry: Registry<TagDefinition>,
   store: StateStoreAPI,
-  llmStrategy?: LlmSteeringStrategy,   // absent = rule-only; pi impl injected in extension/index.ts
+  llmStrategy?: LlmSteeringStrategy, // absent = rule-only; pi impl injected in extension/index.ts
   clock?: Clock,
 ) => SteererAPI;
-```
+````
 
 **Steerer run sequence**:
+
 1. Load all entries from `store.model.byId`
 2. `scoreEntry()` each → `AttentionScore[]`
 3. Partition by `isPromotable / isDemotable / isBorderline`

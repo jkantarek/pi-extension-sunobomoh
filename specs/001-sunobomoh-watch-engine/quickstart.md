@@ -24,10 +24,10 @@ After install, restart pi or run `/reload`. You should see:
 
 ## Two Ways to Add a Watcher
 
-| Path | When to use | Code required |
-|---|---|---|
-| **Config file** | Built-in watchers (github, filesystem, slack, gmail) | Zero — edit JSON |
-| **Programmatic** | Custom watcher definitions | One sibling pi extension file |
+| Path             | When to use                                          | Code required                 |
+| ---------------- | ---------------------------------------------------- | ----------------------------- |
+| **Config file**  | Built-in watchers (github, filesystem, slack, gmail) | Zero — edit JSON              |
+| **Programmatic** | Custom watcher definitions                           | One sibling pi extension file |
 
 ---
 
@@ -96,7 +96,12 @@ Write a `WatcherDefinition` object and a sibling pi extension that registers it.
 ```typescript
 // .pi/watchers/my-jira-watcher.ts
 import type { WatcherDefinition } from '@your-org/pi-extension-sunobomoh';
-import { unsafeWatcherId, unsafeTagId, toResourceUri, isOk } from '@your-org/pi-extension-sunobomoh';
+import {
+  unsafeWatcherId,
+  unsafeTagId,
+  toResourceUri,
+  isOk,
+} from '@your-org/pi-extension-sunobomoh';
 import { Type } from 'typebox';
 
 interface JiraConfig {
@@ -119,17 +124,17 @@ export const jiraWatcher: WatcherDefinition<JiraConfig, JiraIssue> = {
   description: 'Polls open Jira issues assigned to you',
 
   configSchema: Type.Object({
-    baseUrl:    Type.String(),
-    token:      Type.String(),
+    baseUrl: Type.String(),
+    token: Type.String(),
     projectKey: Type.String(),
   }),
 
   async watch(config, signal) {
-    const resp = await fetch(
-      `${config.baseUrl}/rest/api/3/search?jql=assignee=currentUser()`,
-      { headers: { Authorization: `Bearer ${config.token}` }, signal }
-    );
-    const body = await resp.json() as { issues: JiraIssue[] };
+    const resp = await fetch(`${config.baseUrl}/rest/api/3/search?jql=assignee=currentUser()`, {
+      headers: { Authorization: `Bearer ${config.token}` },
+      signal,
+    });
+    const body = (await resp.json()) as { issues: JiraIssue[] };
     return body.issues;
   },
 
@@ -186,7 +191,7 @@ export const jiraWatcher: WatcherDefinition<JiraConfig, JiraIssue> = {
       id: 'log-urgent',
       phase: 'after_hydrate',
       async handler(ctx) {
-        const urgent = ctx.entries.filter(e => e.tags.includes(unsafeTagId('urgent')));
+        const urgent = ctx.entries.filter((e) => e.tags.includes(unsafeTagId('urgent')));
         if (urgent.length > 0) {
           console.warn(`[sunobomoh] ${urgent.length} urgent Jira issues`);
         }
@@ -215,8 +220,8 @@ export default function (pi: ExtensionAPI): void {
       return;
     }
     sunobomoh.registerWatcher(jiraWatcher, {
-      baseUrl:    'https://jira.corp.com',
-      token:      process.env['JIRA_TOKEN'] ?? '',
+      baseUrl: 'https://jira.corp.com',
+      token: process.env['JIRA_TOKEN'] ?? '',
       projectKey: 'PROJ',
     });
   });
@@ -229,7 +234,11 @@ pi discovers `.pi/extensions/` automatically — no further configuration needed
 
 ```typescript
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-import { getSunobomoh, UNKNOWN_OUTCOME_SCHEMA, unsafeTagId } from '@your-org/pi-extension-sunobomoh';
+import {
+  getSunobomoh,
+  UNKNOWN_OUTCOME_SCHEMA,
+  unsafeTagId,
+} from '@your-org/pi-extension-sunobomoh';
 import { Type } from 'typebox';
 
 export default function (pi: ExtensionAPI): void {
@@ -239,13 +248,13 @@ export default function (pi: ExtensionAPI): void {
 
     // Tag with a typed outcome schema
     sunobomoh.registerTag({
-      id:            unsafeTagId('jira-issue'),
-      label:         'Jira Issue',
-      description:   'An open Jira issue assigned to me',
+      id: unsafeTagId('jira-issue'),
+      label: 'Jira Issue',
+      description: 'An open Jira issue assigned to me',
       defaultStatus: 'pending',
       attentionWeight: 6,
       outcomeSchema: Type.Object({
-        key:      Type.String(),
+        key: Type.String(),
         priority: Type.String(),
         resolved: Type.Boolean(),
       }),
@@ -253,9 +262,9 @@ export default function (pi: ExtensionAPI): void {
 
     // Tag with free-form outcome (no specific schema needed)
     sunobomoh.registerTag({
-      id:            unsafeTagId('mention'),
-      label:         'Mention',
-      description:   'I was @mentioned',
+      id: unsafeTagId('mention'),
+      label: 'Mention',
+      description: 'I was @mentioned',
       defaultStatus: 'pending',
       attentionWeight: 5,
       outcomeSchema: UNKNOWN_OUTCOME_SCHEMA,
@@ -289,13 +298,13 @@ On `/reload`, `session_start` fires again and all registrations re-execute clean
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command             | Description                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------- |
 | `/sunobomoh:config` | **Add or remove watchers interactively** — discover built-ins, collect config, live-apply |
-| `/watch` | Show registered watchers, last-run times, entry counts |
-| `/state` | Query and display current state (supports `--tag`, `--attention`, `--watcher`) |
-| `/hydrate` | Manually trigger a hydration pass for all or a specific watcher |
-| `/steer` | Manually trigger the steering step (rule-based + optional LLM) |
+| `/watch`            | Show registered watchers, last-run times, entry counts                                    |
+| `/state`            | Query and display current state (supports `--tag`, `--attention`, `--watcher`)            |
+| `/hydrate`          | Manually trigger a hydration pass for all or a specific watcher                           |
+| `/steer`            | Manually trigger the steering step (rule-based + optional LLM)                            |
 
 Examples:
 
@@ -311,11 +320,11 @@ Examples:
 
 ## LLM Tools (callable by pi's model)
 
-| Tool | Description |
-|------|-------------|
-| `watch_query` | Query state by tags, watcher, attention status, time range |
-| `watch_mark_attention` | Manually promote/demote an entry to/from needsAttention |
-| `watch_trigger_steer` | Trigger a steering run and return the result |
+| Tool                   | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| `watch_query`          | Query state by tags, watcher, attention status, time range |
+| `watch_mark_attention` | Manually promote/demote an entry to/from needsAttention    |
+| `watch_trigger_steer`  | Trigger a steering run and return the result               |
 
 Example LLM interaction:
 
@@ -336,6 +345,7 @@ pi: [calls watch_query({ watcher: "github", needsAttention: true })]
 The extension adds two persistent UI elements.
 
 **Footer status** (always visible, from `renderFooterStatus()`):
+
 ```
 👁 sunobomoh · ⚠ 3 attn │ 47 entries │ ↻ 7m
 ```
@@ -345,6 +355,7 @@ Each entry line: `{emoji} {label — OSC 8 clickable link}  {source}  {age}`.
 Age-based brightness decay: full color < 4h · muted 4–24h · dim > 24h.
 
 Default grouping (`"grouping": "none"` — sequential):
+
 ```
 🔴 Fix auth bug in login flow          gh:#142    2m
 👀 Review: Rate limiter PR             gh:#138    8m
@@ -354,6 +365,7 @@ Default grouping (`"grouping": "none"` — sequential):
 ```
 
 With `"grouping": "tag"`:
+
 ```
 ── 🔴 urgent ──────────────────────────────────────
 🔴 Fix auth bug in login flow          gh:#142    2m

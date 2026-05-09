@@ -1,7 +1,7 @@
 {
-  "name": "ts-ultrastrict-ai",
+  "name": "pi-extension-sunobomoh",
   "version": "0.1.0",
-  "description": "Ultra-strict TypeScript project template with full AI agent tooling",
+  "description": "Programmable multi-source event watcher extension for pi coding agent",
   "private": false,
   "type": "module",
   "packageManager": "pnpm@10.12.1",
@@ -17,6 +17,16 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "prepare": "husky"
+  },
+  "pi": {
+    "extensions": [
+      "./src/extension/index.ts"
+    ]
+  },
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "^0.73.1",
+    "typebox": "^1.1.38",
+    "ulid": "^3.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

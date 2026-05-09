@@ -20,26 +20,26 @@ All quality gates must pass on a clean slate before any domain code is written.
 
 ### P001F001 — Package identity and runtime dependencies
 
-- [ ] P001F001T001 Rename package `"name"` to `"pi-extension-sunobomoh"` and add runtime `dependencies` block (`ulid`, `typebox`, `@mariozechner/pi-coding-agent`) to `package.json`
-- [ ] P001F001T002 Add `"pi": { "extensions": ["./src/extension/index.ts"] }` manifest key to `package.json` and run `pnpm install` to lock new deps
+- [x] P001F001T001 Rename package `"name"` to `"pi-extension-sunobomoh"` and add runtime `dependencies` block (`ulid`, `typebox`, `@mariozechner/pi-coding-agent`) to `package.json`
+- [x] P001F001T002 Add `"pi": { "extensions": ["./src/extension/index.ts"] }` manifest key to `package.json` and run `pnpm install` to lock new deps
 
 ### P001F002 — Remove placeholder source, scaffold `src/` domains
 
-- [ ] P001F002T001 Delete `src/index.ts` and `src/index.test.ts` (placeholder scaffold — not part of the extension)
-- [ ] P001F002T002 Create empty `src/core/`, `src/state/`, `src/watchers/`, `src/hydrators/`, `src/side-effects/`, `src/tags/`, `src/config/`, `src/ui/`, `src/scheduler/`, `src/steering/`, `src/extension/` directories each with a `.gitkeep`
+- [x] P001F002T001 Delete `src/index.ts` and `src/index.test.ts` (placeholder scaffold — not part of the extension)
+- [x] P001F002T002 Create empty `src/core/`, `src/state/`, `src/watchers/`, `src/hydrators/`, `src/side-effects/`, `src/tags/`, `src/config/`, `src/ui/`, `src/scheduler/`, `src/steering/`, `src/extension/` directories each with a `.gitkeep`
 
 ### P001F003 — Verify quality gates on clean slate
 
-- [ ] P001F003T001 Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` — all must pass with zero source files (empty domain dirs are fine)
+- [x] P001F003T001 Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` — all must pass with zero source files (empty domain dirs are fine)
 
 ### Exit Criteria: Phase 1
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests | `pnpm test` | All pass (no tests yet — zero is passing) |
+| Gate       | Command             | Required                                  |
+| ---------- | ------------------- | ----------------------------------------- |
+| TypeScript | `pnpm typecheck`    | Zero errors                               |
+| Lint       | `pnpm lint`         | Zero warnings                             |
+| Format     | `pnpm format:check` | All files pass                            |
+| Tests      | `pnpm test`         | All pass (no tests yet — zero is passing) |
 
 ---
 
@@ -77,13 +77,13 @@ any user story begins. No domain code outside `src/core/` can be written until t
 
 ### Exit Criteria: Phase 2
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: `src/core/` is complete. All domain work can now begin.
 
@@ -142,13 +142,13 @@ entry appears in `model.byId` with correct fields. Query with `StateQuery` and a
 
 ### Exit Criteria: Phase 3 (US1)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **ESLint contract constraints**: All source files ≤ 150 non-comment lines · JSDoc = `@example` only · no `@ts-ignore`
 
@@ -223,13 +223,13 @@ store. Independently testable by injecting a fake `WatcherDefinition` with no ne
 
 ### Exit Criteria: Phase 4 (US2)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: A watcher can be defined, executed by hand, and its events persisted and queried. No scheduler needed yet.
 
@@ -287,13 +287,13 @@ Call `triggerTick()` and assert `runWatchers` was called once. Call `triggerStee
 
 ### Exit Criteria: Phase 5 (US3)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: Engine runs autonomously. Entries accumulate, scoring fires, `needsAttention` toggles.
 
@@ -354,13 +354,13 @@ Call `getSunobomoh()` before and after `_setSunobomohInstance` — assert undefi
 
 ### Exit Criteria: Phase 6 (US4)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: Extension loads into pi, watcher config is persisted, `/sunobomoh:config` runs interactively.
 
@@ -418,13 +418,13 @@ model and assert returned lines contain emoji, label text, source abbreviation, 
 
 ### Exit Criteria: Phase 7 (US5)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: Widget renders correctly from pure functions. pi integration wires it to the live model.
 
@@ -457,13 +457,13 @@ call `runWatcher()`, and assert a `StateEntry` appears with `sourceUri` starting
 
 ### Exit Criteria: Phase 8 (US6)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
 
 **Checkpoint**: Two real watchers work end-to-end. Activating via `sunobomoh.config.json` produces live state entries.
 
@@ -492,32 +492,33 @@ call `runWatcher()`, and assert a `StateEntry` appears with `sourceUri` starting
 
 ### Exit Criteria: Phase 9 (Polish)
 
-| Gate | Command | Required |
-|------|---------|----------|
-| TypeScript | `pnpm typecheck` | Zero errors |
-| Lint | `pnpm lint` | Zero warnings |
-| Format | `pnpm format:check` | All files pass |
-| Tests + Doctests | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% all metrics |
-| Build | `pnpm build` | Zero errors |
-| CI script | `script/ci` | Exits 0 |
+| Gate             | Command              | Required         |
+| ---------------- | -------------------- | ---------------- |
+| TypeScript       | `pnpm typecheck`     | Zero errors      |
+| Lint             | `pnpm lint`          | Zero warnings    |
+| Format           | `pnpm format:check`  | All files pass   |
+| Tests + Doctests | `pnpm test`          | All pass         |
+| Coverage         | `pnpm test:coverage` | ≥98% all metrics |
+| Build            | `pnpm build`         | Zero errors      |
+| CI script        | `script/ci`          | Exits 0          |
 
 ---
 
 ## Global Quality Gates
 
-| Gate | Command | Threshold |
-|------|---------|----------|
-| TypeScript strict | `pnpm typecheck` | Zero errors |
-| ESLint | `pnpm lint` | Zero warnings (`--max-warnings 0`) |
-| Prettier | `pnpm format:check` | All files formatted |
-| Vitest (tests + doctests) | `pnpm test` | All pass |
-| Coverage | `pnpm test:coverage` | ≥98% lines/fns/branches/stmts |
-| Build (final phase) | `pnpm build` | Zero errors |
+| Gate                      | Command              | Threshold                          |
+| ------------------------- | -------------------- | ---------------------------------- |
+| TypeScript strict         | `pnpm typecheck`     | Zero errors                        |
+| ESLint                    | `pnpm lint`          | Zero warnings (`--max-warnings 0`) |
+| Prettier                  | `pnpm format:check`  | All files formatted                |
+| Vitest (tests + doctests) | `pnpm test`          | All pass                           |
+| Coverage                  | `pnpm test:coverage` | ≥98% lines/fns/branches/stmts      |
+| Build (final phase)       | `pnpm build`         | Zero errors                        |
 
 **ESLint contract** (violations are errors — block every gate):
+
 - All source files ≤ 150 non-comment lines
-- JSDoc = `@example` blocks with `` ```ts @import.meta.vitest `` fences only
+- JSDoc = `@example` blocks with ` ```ts @import.meta.vitest ` fences only
 - No `@ts-ignore` / `@ts-expect-error` without adjacent `@example` doctest
 - No unused locals or parameters
 
@@ -569,19 +570,19 @@ After both complete: P006 → P008 → P009
 
 Traced all cross-phase artifact dependencies before writing this file:
 
-| Check | Result |
-|---|---|
-| `src/core/ids.ts` (`IdFactory`) consumed by `toStateEntry()` in P004 | ✅ P002F003 completes before P004F006 |
-| `parseStateEntry()` in P003 consumed by `projectLine()` in P003 | ✅ F002 before F004, same phase |
-| `runPhase()` in P004 consumed by `runWatcher()` in P004 | ✅ F009 before F010, same phase |
-| `store.append()` in P003 consumed by integration test in P004F011 | ✅ P003 completes before P004 |
-| `shouldRunSteering()` in P005 consumed by `createScheduler()` in P005 | ✅ F002 before F003, same phase |
-| `createSteerer()` in P005 consumed by `buildTriggerSteerTool()` in P006 | ✅ P005 completes before P006 |
-| `groupEntries()` in P007 consumed by `renderAttentionWidget()` in P007 | ✅ F006 before F008, same phase |
-| `renderAttentionWidget()` wired into `extension/index.ts` in P007F008T003 | ✅ P007 after P006 (index.ts exists) |
-| `filesystemWatcher` registered in `builtin-bundle.ts` in P008F001T003 | ✅ P008 after P006F006 |
-| `[P]` markers in P002 F004/F005 — both touch different files with no inter-dep | ✅ registry.ts and ports.ts are independent |
-| P004 F001–F006 all marked `[P]` — tags and watcher types have no dependency on each other | ✅ confirmed separate files |
+| Check                                                                                     | Result                                      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `src/core/ids.ts` (`IdFactory`) consumed by `toStateEntry()` in P004                      | ✅ P002F003 completes before P004F006       |
+| `parseStateEntry()` in P003 consumed by `projectLine()` in P003                           | ✅ F002 before F004, same phase             |
+| `runPhase()` in P004 consumed by `runWatcher()` in P004                                   | ✅ F009 before F010, same phase             |
+| `store.append()` in P003 consumed by integration test in P004F011                         | ✅ P003 completes before P004               |
+| `shouldRunSteering()` in P005 consumed by `createScheduler()` in P005                     | ✅ F002 before F003, same phase             |
+| `createSteerer()` in P005 consumed by `buildTriggerSteerTool()` in P006                   | ✅ P005 completes before P006               |
+| `groupEntries()` in P007 consumed by `renderAttentionWidget()` in P007                    | ✅ F006 before F008, same phase             |
+| `renderAttentionWidget()` wired into `extension/index.ts` in P007F008T003                 | ✅ P007 after P006 (index.ts exists)        |
+| `filesystemWatcher` registered in `builtin-bundle.ts` in P008F001T003                     | ✅ P008 after P006F006                      |
+| `[P]` markers in P002 F004/F005 — both touch different files with no inter-dep            | ✅ registry.ts and ports.ts are independent |
+| P004 F001–F006 all marked `[P]` — tags and watcher types have no dependency on each other | ✅ confirmed separate files                 |
 
 **No gaps found.** Every artifact produced in phase N is consumed correctly in N+1 without requiring revisiting completed tasks.
 

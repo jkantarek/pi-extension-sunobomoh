@@ -32,12 +32,12 @@ the same error-wrapping pattern.
 ```typescript
 // The entire module — ~25 non-comment lines
 export type Result<T, E = Error> =
-  | { readonly ok: true;  readonly value: T }
+  | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
-export const ok  = <T>(value: T): Result<T, never>    => ({ ok: true,  value });
-export const err = <E>(error: E): Result<never, E>    => ({ ok: false, error });
-export const isOk  = <T, E>(r: Result<T, E>): r is { ok: true;  value: T } => r.ok;
+export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
+export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
+export const isOk = <T, E>(r: Result<T, E>): r is { ok: true; value: T } => r.ok;
 export const isErr = <T, E>(r: Result<T, E>): r is { ok: false; error: E } => !r.ok;
 ```
 
@@ -86,10 +86,10 @@ export const createRegistry = <T>(getId: (t: T) => string): Registry<T> => { ...
 
 ```typescript
 // src/watchers/registry.ts — 5 non-comment lines
-export const createWatcherRegistry = () => createRegistry<BoundWatcher>(w => w.definition.id);
+export const createWatcherRegistry = () => createRegistry<BoundWatcher>((w) => w.definition.id);
 
 // src/tags/registry.ts — 5 non-comment lines
-export const createTagRegistry = () => createRegistry<TagDefinition>(t => t.id);
+export const createTagRegistry = () => createRegistry<TagDefinition>((t) => t.id);
 ```
 
 Both domain files now contain only domain-specific type exports + the one-liner factory wrapper.
@@ -106,7 +106,7 @@ export interface FileSystem {
   exists(path: string): Promise<boolean>;
 }
 export interface Clock {
-  now(): IsoTimestamp;   // wraps new Date().toISOString() cast to brand
+  now(): IsoTimestamp; // wraps new Date().toISOString() cast to brand
 }
 ```
 
@@ -140,6 +140,7 @@ Implement as a single pure `projectLine(model: ReadModel, line: StateLineType): 
 function. `StateStore` just calls `lines.reduce(projectLine, emptyModel)` on load.
 
 This pattern means:
+
 - **No mutation of existing state records** — ever. Only appends + replay.
 - The entire "resolve entry with patches applied" logic is one `filter + reduce` over the model.
 - `StateStore` has **two concerns only**: append to disk, project from disk. Two methods.
@@ -149,8 +150,8 @@ This pattern means:
 // store.ts public API — the whole file fits in <100 lines with this pattern
 export interface StateStoreAPI {
   append(lines: readonly StateLineType[]): Promise<Result<void, Error>>;
-  load():                                  Promise<Result<void, Error>>;
-  readonly model: Readonly<ReadModel>;  // projection; recomputed on load
+  load(): Promise<Result<void, Error>>;
+  readonly model: Readonly<ReadModel>; // projection; recomputed on load
 }
 ```
 
@@ -201,6 +202,7 @@ export const runWatcher = async (
 ```
 
 Internally:
+
 1. Run `before_watch` side effects (halt if requested)
 2. Call `watcher.definition.watch(config, signal)` inside a `withTimeout(signal, config.timeoutMs)`
 3. Map events → StateEntry with `toStateEntry(event, def, config, clock)` pure coercion function
@@ -232,7 +234,7 @@ The entire HydrationPipeline is a single exported pure function:
 export const runHydrationPipeline = async (
   hydrators: readonly HydratorDefinition[],
   entries: readonly StateEntry[],
-  signal: AbortSignal
+  signal: AbortSignal,
 ): Promise<Result<readonly StateEntry[], HydrationError>> => {
   let current = entries;
   for (const hydrator of hydrators) {
@@ -263,11 +265,11 @@ export const runHydrationPipeline = async (
 export const runPhase = async (
   phase: CallbackPhase,
   defs: readonly SideEffectDefinition[],
-  ctx: SideEffectContext
+  ctx: SideEffectContext,
 ): Promise<Result<{ halted: boolean }, SideEffectError>> => {
-  for (const def of defs.filter(d => d.phase === phase)) {
+  for (const def of defs.filter((d) => d.phase === phase)) {
     const result = await safeRun(def, ctx);
-    if (!result.ok) return result;           // propagate error
+    if (!result.ok) return result; // propagate error
     if (result.value?.halt === true) return ok({ halted: true });
   }
   return ok({ halted: false });
@@ -283,8 +285,8 @@ The `filter(d => d.phase === phase)` step is extracted as:
 // pure, 1-liner, separately doctestable
 export const phaseHandlers = (
   phase: CallbackPhase,
-  defs: readonly SideEffectDefinition[]
-): readonly SideEffectDefinition[] => defs.filter(d => d.phase === phase);
+  defs: readonly SideEffectDefinition[],
+): readonly SideEffectDefinition[] => defs.filter((d) => d.phase === phase);
 ```
 
 ---
@@ -300,7 +302,7 @@ use a sentinel:
 export const UNKNOWN_OUTCOME_SCHEMA: TSchema = Type.Unknown();
 
 export interface TagDefinition {
-  readonly outcomeSchema: TSchema;  // never undefined — use UNKNOWN_OUTCOME_SCHEMA
+  readonly outcomeSchema: TSchema; // never undefined — use UNKNOWN_OUTCOME_SCHEMA
   // ...
 }
 ```
@@ -325,9 +327,9 @@ that replaces the three places in the codebase where outcomes are constructed:
 ```typescript
 export const initializeOutcomes = (
   tagIds: readonly TagId[],
-  registry: Registry<TagDefinition>
+  registry: Registry<TagDefinition>,
 ): ReadonlyMap<TagId, TagOutcome> =>
-  new Map(tagIds.map(id => [id, createTagOutcome(registry.get(id) ?? BUILTIN_TAGS[0]!)]));
+  new Map(tagIds.map((id) => [id, createTagOutcome(registry.get(id) ?? BUILTIN_TAGS[0]!)]));
 //                                                                      ^^ Null Object fallback
 ```
 
@@ -365,7 +367,7 @@ export const createScheduler = (
 export const shouldRunSteering = (
   lastSteeringAt: IsoTimestamp | undefined,
   now: IsoTimestamp,
-  config: SchedulerConfig
+  config: SchedulerConfig,
 ): boolean => {
   if (lastSteeringAt === undefined) return true;
   return msElapsed(lastSteeringAt, now) >= config.steeringIntervalMinutes * 60_000;
@@ -392,6 +394,7 @@ export const scoreEntry = (
 ```
 
 Extracting scoring as a pure function separate from the steerer means:
+
 - Every edge case (all urgent tags, stale entry, recency decay) is a doctest
 - The steerer is just `entries.map(e => scoreEntry(e, registry, config, now))`
 
@@ -401,11 +404,11 @@ The three decisions (promote / demote / borderline) are specifications:
 
 ```typescript
 // 3 pure predicate functions — no if/else chains anywhere else
-export const isPromotable  = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isPromotable = (s: AttentionScore, c: SteeringConfig): boolean =>
   s.score >= c.promoteThreshold;
-export const isDemotable   = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isDemotable = (s: AttentionScore, c: SteeringConfig): boolean =>
   s.score <= c.demoteThreshold;
-export const isBorderline  = (s: AttentionScore, c: SteeringConfig): boolean =>
+export const isBorderline = (s: AttentionScore, c: SteeringConfig): boolean =>
   !isPromotable(s, c) && !isDemotable(s, c);
 ```
 
@@ -440,6 +443,7 @@ The pi `sendUserMessage` implementation of `LlmSteeringStrategy` lives in `src/e
 ### `src/extension/index.ts` — **Façade Pattern**
 
 The only file that imports from `@mariozechner/pi-coding-agent`. It:
+
 1. Instantiates all domain objects (DI wiring point)
 2. Implements `LlmSteeringStrategy` using `pi.sendUserMessage`
 3. Registers pi event handlers, tools, commands, and UI
@@ -531,59 +535,59 @@ Every file is under 100 non-comment lines. Zero files approach the 150-line limi
 
 ## TypeScript Constraint Impact Matrix
 
-| Constraint | Affected types | Required fix |
-|---|---|---|
-| `noPropertyAccessFromIndexSignature` | `StateEntry.outcomes` (Record) | Use `ReadonlyMap<TagId, TagOutcome>` in-memory; `Record` only in JSONL wire type `StateEntryJson` |
-| `noPropertyAccessFromIndexSignature` | `Registry<T>` | Use `Map<string, T>` internally; `get(id)` accessor method on public API |
-| `noUncheckedIndexedAccess` | All `array[i]` accesses | Use `.at(0)`, `.find()`, or explicit `undefined` guards; never raw index access |
-| `noUncheckedIndexedAccess` | `BUILTIN_TAGS[0]` in `initializeOutcomes` | Assign to a named `const` with `!` assertion justified by doctest |
-| `exactOptionalPropertyTypes` | `StateEntry.hydratedData?`, `StateEntry.attentionScore?` | Never assign `undefined` explicitly; use conditional spread: `...(data ? { hydratedData: data } : {})` |
-| `exactOptionalPropertyTypes` | `StateEntryMetadata.hydratedAt?` etc. | Same: omit the field rather than setting `= undefined` |
-| `noImplicitOverride` | TUI components extending `Container` in `ui.ts` | Add `override` to all overriding methods (render, invalidate, handleInput) |
-| `noUnusedParameters` | `runPhase` receives `ctx` even when `defs` is empty | Prefix with `_ctx` or restructure guard to always use ctx |
+| Constraint                           | Affected types                                           | Required fix                                                                                           |
+| ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `noPropertyAccessFromIndexSignature` | `StateEntry.outcomes` (Record)                           | Use `ReadonlyMap<TagId, TagOutcome>` in-memory; `Record` only in JSONL wire type `StateEntryJson`      |
+| `noPropertyAccessFromIndexSignature` | `Registry<T>`                                            | Use `Map<string, T>` internally; `get(id)` accessor method on public API                               |
+| `noUncheckedIndexedAccess`           | All `array[i]` accesses                                  | Use `.at(0)`, `.find()`, or explicit `undefined` guards; never raw index access                        |
+| `noUncheckedIndexedAccess`           | `BUILTIN_TAGS[0]` in `initializeOutcomes`                | Assign to a named `const` with `!` assertion justified by doctest                                      |
+| `exactOptionalPropertyTypes`         | `StateEntry.hydratedData?`, `StateEntry.attentionScore?` | Never assign `undefined` explicitly; use conditional spread: `...(data ? { hydratedData: data } : {})` |
+| `exactOptionalPropertyTypes`         | `StateEntryMetadata.hydratedAt?` etc.                    | Same: omit the field rather than setting `= undefined`                                                 |
+| `noImplicitOverride`                 | TUI components extending `Container` in `ui.ts`          | Add `override` to all overriding methods (render, invalidate, handleInput)                             |
+| `noUnusedParameters`                 | `runPhase` receives `ctx` even when `defs` is empty      | Prefix with `_ctx` or restructure guard to always use ctx                                              |
 
 ---
 
 ## Anti-Patterns Explicitly Forbidden
 
-| Anti-pattern | Where it would appear | Why forbidden |
-|---|---|---|
-| **Abstract class** | `BaseWatcher`, `BaseHydrator` | Adds inheritance, limits composability, inflates line count |
+| Anti-pattern                                  | Where it would appear                                | Why forbidden                                                |
+| --------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| **Abstract class**                            | `BaseWatcher`, `BaseHydrator`                        | Adds inheritance, limits composability, inflates line count  |
 | **Class with private state** for domain logic | `SideEffectExecutor`, `HydrationPipeline` as classes | Untestable internals; pure functions cover it in fewer lines |
-| **`setInterval` for scheduler** | `scheduler.ts` | Drifts; requires `vi.useFakeTimers()` (a mock) to test |
-| **`vi.mock()`** anywhere | test files | Explicitly prohibited by AGENTS.md; signals broken design |
-| **`Record<string, V>` with dot access** | state store, tag registry | Compile error under `noPropertyAccessFromIndexSignature` |
-| **`array[n]` without undefined guard** | any array access | Compile error under `noUncheckedIndexedAccess` |
-| **Optional field set to `undefined`** | `entry.hydratedData = undefined` | Compile error under `exactOptionalPropertyTypes` |
-| **Catch-all `utils.ts`** | anywhere | Prohibited by "one public concern per file" |
-| **Global singleton state** | watcher/tag registries | Prevents test isolation; use factory injection |
-| **Prose JSDoc** | any source file | ESLint `local/jsdoc-examples-only` will error |
+| **`setInterval` for scheduler**               | `scheduler.ts`                                       | Drifts; requires `vi.useFakeTimers()` (a mock) to test       |
+| **`vi.mock()`** anywhere                      | test files                                           | Explicitly prohibited by AGENTS.md; signals broken design    |
+| **`Record<string, V>` with dot access**       | state store, tag registry                            | Compile error under `noPropertyAccessFromIndexSignature`     |
+| **`array[n]` without undefined guard**        | any array access                                     | Compile error under `noUncheckedIndexedAccess`               |
+| **Optional field set to `undefined`**         | `entry.hydratedData = undefined`                     | Compile error under `exactOptionalPropertyTypes`             |
+| **Catch-all `utils.ts`**                      | anywhere                                             | Prohibited by "one public concern per file"                  |
+| **Global singleton state**                    | watcher/tag registries                               | Prevents test isolation; use factory injection               |
+| **Prose JSDoc**                               | any source file                                      | ESLint `local/jsdoc-examples-only` will error                |
 
 ---
 
 ## Pattern → File Reference Card
 
-| Pattern | File(s) |
-|---|---|
-| Railway-Oriented Programming (Result<T,E>) | `src/core/result.ts` |
-| Branded Primitive / Opaque Type | `src/core/brands.ts` |
-| Generic Registry Factory | `src/core/registry.ts` |
-| Interface Segregation (Hexagonal Ports) | `src/core/ports.ts` |
-| Event Sourcing (append-only log) | `src/state/store.ts` |
-| Projection / Read Model | `src/state/read-model.ts` |
-| CQRS (writes vs reads separated) | `src/state/store.ts` vs `src/state/query.ts` |
-| Value Objects (immutable, readonly) | `src/state/types.ts`, `src/tags/types.ts` |
-| Fluent Builder + Immutable Accumulation | `src/state/query.ts` |
-| Strategy Pattern | `src/watchers/types.ts`, `src/steering/steerer.ts` |
-| Pure Function Coercion | `src/watchers/coerce.ts` |
-| Middleware Pipeline (async reduce) | `src/hydrators/pipeline.ts` |
-| Chain of Responsibility (halt-able loop) | `src/side-effects/executor.ts` |
-| Null Object Pattern | `src/tags/types.ts` (`UNKNOWN_OUTCOME_SCHEMA`) |
-| Factory Functions | `src/tags/outcomes.ts`, all `create*` functions |
-| Specification Pattern (predicates) | `src/steering/classify.ts` |
-| Pure Scoring Function | `src/steering/score-entry.ts` |
-| Self-Scheduling setTimeout | `src/scheduler/scheduler.ts` |
-| Pure Predicate for timer logic | `src/scheduler/should-steer.ts` |
-| Façade (pi isolation boundary) | `src/extension/index.ts` |
-| Adapter (domain → pi TUI) | `src/extension/ui.ts` |
-| Builder Functions (domain → pi tools) | `src/extension/tools.ts` |
+| Pattern                                    | File(s)                                            |
+| ------------------------------------------ | -------------------------------------------------- |
+| Railway-Oriented Programming (Result<T,E>) | `src/core/result.ts`                               |
+| Branded Primitive / Opaque Type            | `src/core/brands.ts`                               |
+| Generic Registry Factory                   | `src/core/registry.ts`                             |
+| Interface Segregation (Hexagonal Ports)    | `src/core/ports.ts`                                |
+| Event Sourcing (append-only log)           | `src/state/store.ts`                               |
+| Projection / Read Model                    | `src/state/read-model.ts`                          |
+| CQRS (writes vs reads separated)           | `src/state/store.ts` vs `src/state/query.ts`       |
+| Value Objects (immutable, readonly)        | `src/state/types.ts`, `src/tags/types.ts`          |
+| Fluent Builder + Immutable Accumulation    | `src/state/query.ts`                               |
+| Strategy Pattern                           | `src/watchers/types.ts`, `src/steering/steerer.ts` |
+| Pure Function Coercion                     | `src/watchers/coerce.ts`                           |
+| Middleware Pipeline (async reduce)         | `src/hydrators/pipeline.ts`                        |
+| Chain of Responsibility (halt-able loop)   | `src/side-effects/executor.ts`                     |
+| Null Object Pattern                        | `src/tags/types.ts` (`UNKNOWN_OUTCOME_SCHEMA`)     |
+| Factory Functions                          | `src/tags/outcomes.ts`, all `create*` functions    |
+| Specification Pattern (predicates)         | `src/steering/classify.ts`                         |
+| Pure Scoring Function                      | `src/steering/score-entry.ts`                      |
+| Self-Scheduling setTimeout                 | `src/scheduler/scheduler.ts`                       |
+| Pure Predicate for timer logic             | `src/scheduler/should-steer.ts`                    |
+| Façade (pi isolation boundary)             | `src/extension/index.ts`                           |
+| Adapter (domain → pi TUI)                  | `src/extension/ui.ts`                              |
+| Builder Functions (domain → pi tools)      | `src/extension/tools.ts`                           |
