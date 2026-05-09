@@ -101,44 +101,44 @@ entry appears in `model.byId` with correct fields. Query with `StateQuery` and a
 
 ### P003F001 — Wire type guards for all JSONL line types
 
-- [ ] P003F001T001 Write inline doctests for `isStateEntryJson`, `isStatePatchJson`, `isSteeringRunJson`, `isSchedulerRunJson` and define `StateLineJson` union in `src/state/types.ts` (doctests must FAIL)
-- [ ] P003F001T002 Implement all wire interfaces (`StateEntryJson`, `StatePatchJson`, `SteeringRunJson`, `SchedulerRunJson`) and their type-guard functions in `src/state/types.ts`
+- [x] P003F001T001 Write inline doctests for `isStateEntryJson`, `isStatePatchJson`, `isSteeringRunJson`, `isSchedulerRunJson` and define `StateLineJson` union in `src/state/types.ts` (doctests must FAIL)
+- [x] P003F001T002 Implement all wire interfaces (`StateEntryJson`, `StatePatchJson`, `SteeringRunJson`, `SchedulerRunJson`) and their type-guard functions in `src/state/types.ts`
 
 ### P003F002 — In-memory domain types
 
-- [ ] P003F002T001 Write inline doctest for `parseStateEntry(json: StateEntryJson): StateEntry` in `src/state/types.ts` — assert branded types, `ReadonlyMap` outcomes (must FAIL)
-- [ ] P003F002T002 Implement in-memory types (`StateEntry`, `TagOutcome`, `StateEntryMetadata`) and `parseStateEntry()` conversion function in `src/state/types.ts`
+- [x] P003F002T001 Write inline doctest for `parseStateEntry(json: StateEntryJson): StateEntry` in `src/state/types.ts` — assert branded types, `ReadonlyMap` outcomes (must FAIL)
+- [x] P003F002T002 Implement in-memory types (`StateEntry`, `TagOutcome`, `StateEntryMetadata`) and `parseStateEntry()` conversion function in `src/state/types.ts`
 
 ### P003F003 — `emptyModel()` and `ReadModel` shape
 
-- [ ] P003F003T001 [P] Write inline doctest for `emptyModel()` — assert all maps empty, entryCount zero, lastSteeringRun undefined in `src/state/read-model.ts` (must FAIL)
-- [ ] P003F003T002 [P] Implement `ReadModel` interface and `emptyModel()` factory in `src/state/read-model.ts`
+- [x] P003F003T001 [P] Write inline doctest for `emptyModel()` — assert all maps empty, entryCount zero, lastSteeringRun undefined in `src/state/read-model.ts` (must FAIL)
+- [x] P003F003T002 [P] Implement `ReadModel` interface and `emptyModel()` factory in `src/state/read-model.ts`
 
 ### P003F004 — `projectLine()` for `state_entry` and `state_patch`
 
-- [ ] P003F004T001 Write black-box test for `projectLine` with `state_entry` (entry appears in `byId`, `byTag`, `bySourceId`; `needsAttention` set correctly) and with `state_patch` (patch mutates `needsAttention` on resolved entry) in `src/state/read-model.test.ts` (must FAIL)
-- [ ] P003F004T002 Implement `projectLine()` for `state_entry` and `state_patch` cases in `src/state/read-model.ts`
+- [x] P003F004T001 Write black-box test for `projectLine` with `state_entry` (entry appears in `byId`, `byTag`, `bySourceId`; `needsAttention` set correctly) and with `state_patch` (patch mutates `needsAttention` on resolved entry) in `src/state/read-model.test.ts` (must FAIL)
+- [x] P003F004T002 Implement `projectLine()` for `state_entry` and `state_patch` cases in `src/state/read-model.ts`
 
 ### P003F005 — `projectLine()` for `steering_run` and `scheduler_run`
 
-- [ ] P003F005T001 [P] Write inline doctests for `projectLine` with `steering_run` (sets `lastSteeringRun`) and `scheduler_run` (no model change) in `src/state/read-model.ts` (must FAIL)
-- [ ] P003F005T002 [P] Implement `projectLine()` for `steering_run` and `scheduler_run` cases in `src/state/read-model.ts`
+- [x] P003F005T001 [P] Write inline doctests for `projectLine` with `steering_run` (sets `lastSteeringRun`) and `scheduler_run` (no model change) in `src/state/read-model.ts` (must FAIL)
+- [x] P003F005T002 [P] Implement `projectLine()` for `steering_run` and `scheduler_run` cases in `src/state/read-model.ts`
 
 ### P003F006 — `StateStore.load()` — reads JSONL and builds projection
 
-- [ ] P003F006T001 Write black-box test for `createStateStore`: `load()` on a pre-written JSONL file produces correct `ReadModel` (test against real tmpdir file) in `src/state/store.test.ts` (must FAIL)
-- [ ] P003F006T002 Implement `createStateStore(filePath, fs, clock)`: `load()` reads all lines, reduces via `projectLine`, exposes `model` in `src/state/store.ts`
+- [x] P003F006T001 Write black-box test for `createStateStore`: `load()` on a pre-written JSONL file produces correct `ReadModel` (test against real tmpdir file) in `src/state/store.test.ts` (must FAIL)
+- [x] P003F006T002 Implement `createStateStore(filePath, fs, clock)`: `load()` reads all lines, reduces via `projectLine`, exposes `model` in `src/state/store.ts`
 
 ### P003F007 — `StateStore.append()` — atomic JSONL write
 
-- [ ] P003F007T001 Write black-box test for `append()`: written lines are readable after a fresh `load()` call; returns `ok(undefined)` on success, `err(Error)` on write failure (injected failing fs) in `src/state/store.test.ts` (must FAIL)
-- [ ] P003F007T002 Implement `append(lines)` in `src/state/store.ts` using `fs.appendFile` with newline-delimited JSON serialisation
+- [x] P003F007T001 Write black-box test for `append()`: written lines are readable after a fresh `load()` call; returns `ok(undefined)` on success, `err(Error)` on write failure (injected failing fs) in `src/state/store.test.ts` (must FAIL)
+- [x] P003F007T002 Implement `append(lines)` in `src/state/store.ts` using `fs.appendFile` with newline-delimited JSON serialisation
 
 ### P003F008 — `StateQuery` fluent builder
 
-- [ ] P003F008T001 Write inline doctests for `createStateQuery(model)`: `byTag`, `byWatcher`, `needsAttention`, `since`, `until`, `count`, `execute` — all returning new instances (immutability) in `src/state/query.ts` (must FAIL)
-- [ ] P003F008T002 Implement `StateQuery` with immutable predicate accumulation and `execute()` as a single `filter` pass in `src/state/query.ts`
-- [ ] P003F008T003 Refactor `src/state/query.ts` if file approaches 150 non-comment lines — split predicate builders into private helpers
+- [x] P003F008T001 Write inline doctests for `createStateQuery(model)`: `byTag`, `byWatcher`, `needsAttention`, `since`, `until`, `count`, `execute` — all returning new instances (immutability) in `src/state/query.ts` (must FAIL)
+- [x] P003F008T002 Implement `StateQuery` with immutable predicate accumulation and `execute()` as a single `filter` pass in `src/state/query.ts`
+- [x] P003F008T003 Refactor `src/state/query.ts` if file approaches 150 non-comment lines — split predicate builders into private helpers
 
 ### Exit Criteria: Phase 3 (US1)
 

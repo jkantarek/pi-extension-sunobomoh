@@ -78,3 +78,45 @@ Started: 2026-05-08 20:05:45
 - Pre-commit hook (lint-staged + husky) runs BOTH prettier --check AND eslint on staged .ts files — all staged files must pass.
 
 ---
+
+---
+
+## Iteration 3 - 2026-05-08
+
+**User Story**: P003 Event State Store — coverage gap fix
+**Tasks Completed**:
+
+- [x] P003F001T001–T002: types.ts wire interfaces + type guards
+- [x] P003F002T001–T002: parseStateEntry + in-memory domain types
+- [x] P003F003T001–T002: emptyModel() + ReadModel
+- [x] P003F004T001–T002: projectLine() for state_entry and state_patch
+- [x] P003F005T001–T002: projectLine() for steering_run and scheduler_run
+- [x] P003F006T001–T002: StateStore.load() + JSONL projection
+- [x] P003F007T001–T002: StateStore.append()
+- [x] P003F008T001–T003: StateQuery fluent builder
+
+**Tasks Remaining in Story**: None — story complete
+**Commit**: e0d8b5d
+**Files Changed**:
+
+- src/state/types.ts (created)
+- src/state/parse.ts (created)
+- src/state/parse.test.ts (created)
+- src/state/read-model.ts (created)
+- src/state/read-model.test.ts (created)
+- src/state/store.ts (created)
+- src/state/store.test.ts (created)
+- src/state/query.ts (created)
+- src/state/query.test.ts (created)
+- src/state/test-fixtures.ts (created)
+
+**Coverage**: 100% stmts/funcs/lines, 98.41% branches (≥98% threshold)
+**Tests**: 41 pass
+
+**Learnings**:
+
+- `@typescript-eslint/prefer-promise-reject-errors` (from strictTypeChecked) prevents `Promise.reject('string')` in test files — cannot test non-Error branches of `e instanceof Error` guards without eslint-disable; accept as uncoverable (1/63 branches, 98.41% ≥ 98%).
+- `max-lines-per-function: 60` applies to test file `describe` callbacks (not just `it` blocks); large describe blocks need splitting into separate `describe` calls.
+- Blank lines count toward the 150 non-comment `max-lines` limit in test files (only `skipComments: true`, not `skipBlankLines: true`).
+- V8 branch counting for `a || b || c || d` chains counts each operator as 2 branches (true/false short-circuit); a 3-operator OR chain = 8 branches total (not 6).
+- `commitlint subject-case` rule requires all-lowercase subject — "P003 event state store" fails; use "p003 event state store".
