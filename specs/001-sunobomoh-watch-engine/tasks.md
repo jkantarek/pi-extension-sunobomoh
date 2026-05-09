@@ -52,28 +52,28 @@ any user story begins. No domain code outside `src/core/` can be written until t
 
 ### P002F001 — `result.ts` — Railway-Oriented `Result<T,E>`
 
-- [ ] P002F001T001 Write inline doctests for `ok`, `err`, `isOk`, `isErr` in `src/core/result.ts` (file exists with stubs — doctests must FAIL)
-- [ ] P002F001T002 Implement `Result<T,E>`, `ok()`, `err()`, `isOk()`, `isErr()` in `src/core/result.ts`
+- [x] P002F001T001 Write inline doctests for `ok`, `err`, `isOk`, `isErr` in `src/core/result.ts` (file exists with stubs — doctests must FAIL)
+- [x] P002F001T002 Implement `Result<T,E>`, `ok()`, `err()`, `isOk()`, `isErr()` in `src/core/result.ts`
 
 ### P002F002 — `brands.ts` — Branded primitive types
 
-- [ ] P002F002T001 Write inline doctests for `toIsoTimestamp`, `toResourceUri` (valid and invalid URI), and unsafe cast functions in `src/core/brands.ts` (doctests must FAIL)
-- [ ] P002F002T002 Implement `EntryId`, `WatcherId`, `TagId`, `IsoTimestamp`, `ResourceUri` branded types and all factory/cast functions in `src/core/brands.ts`
+- [x] P002F002T001 Write inline doctests for `toIsoTimestamp`, `toResourceUri` (valid and invalid URI), and unsafe cast functions in `src/core/brands.ts` (doctests must FAIL)
+- [x] P002F002T002 Implement `EntryId`, `WatcherId`, `TagId`, `IsoTimestamp`, `ResourceUri` branded types and all factory/cast functions in `src/core/brands.ts`
 
 ### P002F003 — `ids.ts` — ULID monotonic factory
 
-- [ ] P002F003T001 Write inline doctests for `createIdFactory(prng)`: verify 26-char output, monotonic ordering, deterministic sequence from seeded prng in `src/core/ids.ts` (must FAIL)
-- [ ] P002F003T002 Implement `IdFactory` interface, `createIdFactory(prng?)`, `defaultIdFactory` in `src/core/ids.ts` using `monotonicFactory` from `ulid`
+- [x] P002F003T001 Write inline doctests for `createIdFactory(prng)`: verify 26-char output, monotonic ordering, deterministic sequence from seeded prng in `src/core/ids.ts` (must FAIL)
+- [x] P002F003T002 Implement `IdFactory` interface, `createIdFactory(prng?)`, `defaultIdFactory` in `src/core/ids.ts` using `monotonicFactory` from `ulid`
 
 ### P002F004 — `registry.ts` — Generic Registry factory
 
-- [ ] P002F004T001 [P] Write inline doctest for `createRegistry<T>`: register, get, has, getAll, overwrite in `src/core/registry.ts` (must FAIL)
-- [ ] P002F004T002 [P] Implement `Registry<T>` interface and `createRegistry<T>(getId)` factory in `src/core/registry.ts`
+- [x] P002F004T001 [P] Write inline doctest for `createRegistry<T>`: register, get, has, getAll, overwrite in `src/core/registry.ts` (must FAIL)
+- [x] P002F004T002 [P] Implement `Registry<T>` interface and `createRegistry<T>(getId)` factory in `src/core/registry.ts`
 
 ### P002F005 — `ports.ts` — `FileSystem` and `Clock` hexagonal ports
 
-- [ ] P002F005T001 [P] Write inline doctest for `createNodeFileSystem` (appendFile + exists + readFile roundtrip against `tmpdir`) and `createSystemClock` in `src/core/ports.ts` (must FAIL)
-- [ ] P002F005T002 [P] Implement `FileSystem` interface, `Clock` interface, `createNodeFileSystem()`, `createSystemClock()` in `src/core/ports.ts` using `node:fs/promises`
+- [x] P002F005T001 [P] Write inline doctest for `createNodeFileSystem` (appendFile + exists + readFile roundtrip against `tmpdir`) and `createSystemClock` in `src/core/ports.ts` (must FAIL)
+- [x] P002F005T002 [P] Implement `FileSystem` interface, `Clock` interface, `createNodeFileSystem()`, `createSystemClock()` in `src/core/ports.ts` using `node:fs/promises`
 
 ### Exit Criteria: Phase 2
 

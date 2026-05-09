@@ -40,3 +40,41 @@ Started: 2026-05-08 20:05:45
 - `@mariozechner/pi-coding-agent` is deprecated in favour of `@earendil-works/pi-coding-agent` but the tasks spec it explicitly, so the deprecated version was used
 
 ---
+
+---
+
+## Iteration 2 - 2026-05-08T20:11:28-05:00
+
+**User Story**: P002 Foundation — `src/core/`
+**Tasks Completed**:
+
+- [x] P002F001T001: Wrote inline doctests for ok, err, isOk, isErr in result.ts (stubs threw → RED)
+- [x] P002F001T002: Implemented Result<T,E>, ok, err, isOk, isErr in result.ts
+- [x] P002F002T001: Wrote inline doctests for toIsoTimestamp, toResourceUri, unsafe casts in brands.ts (RED)
+- [x] P002F002T002: Implemented branded types + factory/cast functions in brands.ts
+- [x] P002F003T001: Wrote inline doctests for createIdFactory in ids.ts (RED)
+- [x] P002F003T002: Implemented IdFactory, createIdFactory(prng?), defaultIdFactory using ulid
+- [x] P002F004T001: Wrote inline doctest for createRegistry in registry.ts (RED)
+- [x] P002F004T002: Implemented Registry<T> interface, createRegistry<T> factory
+- [x] P002F005T001: Wrote inline doctests for createNodeFileSystem and createSystemClock in ports.ts (RED)
+- [x] P002F005T002: Implemented FileSystem, Clock, createNodeFileSystem, createSystemClock
+      **Tasks Remaining in Story**: None — story complete
+      **Commit**: cb8de92
+      **Files Changed**:
+- src/core/result.ts (created)
+- src/core/brands.ts (created)
+- src/core/ids.ts (created)
+- src/core/registry.ts (created)
+- src/core/ports.ts (created)
+- package.json (added @types/node, --no-warn-ignored to lint-staged)
+- eslint.config.mjs (added .pi/** to ignores)
+  **Learnings\*\*:
+- Inline doctests in vite-plugin-doctest do NOT support static `import` statements — they are compiled into async test bodies where `import` is invalid. Use the module's own exported symbols directly (no import needed for same-file exports), or use `await import('...')` for external modules.
+- ULID `monotonicFactory` only controls the random suffix; the timestamp prefix is always from `Date.now()`. Two factories with the same prng seed will produce different ULIDs if created at different times.
+- `max-lines-per-function: 10` in ESLint applies to the whole arrow function body. Multi-line statement-body arrow functions inside object literals also need explicit return types (`@typescript-eslint/explicit-function-return-type`). Use `void expr` trick to keep single-expression form: `register: (item: T): void => void map.set(...)`.
+- Prettier auto-expands `{ singleStatement; }` multi-line when the line is long. Use expression bodies (no braces) or the `void` operator trick to prevent this.
+- `access(path).then(() => true, () => false)` is idiomatic for `exists()` without async/try-catch — keeps function under the 10-line limit.
+- `.pi/**` must be added to ESLint ignores; lint-staged needs `--no-warn-ignored` flag to suppress "File ignored" warnings when ignored files are explicitly staged.
+- Pre-commit hook (lint-staged + husky) runs BOTH prettier --check AND eslint on staged .ts files — all staged files must pass.
+
+---
