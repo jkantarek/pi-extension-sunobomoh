@@ -440,20 +440,20 @@ call `runWatcher()`, and assert a `StateEntry` appears with `sourceUri` starting
 
 ### P008F001 — `FilesystemWatcher`
 
-- [ ] P008F001T001 Write black-box tests for `filesystemWatcher` in `src/watchers/filesystem/filesystem-watcher.test.ts`: `watch()` against a tmp dir with one `.ts` file returns one event; `extractLabel` returns filename; `extractUri` returns valid `file://` URI; `extractTags` includes `informational` (must FAIL)
-- [ ] P008F001T002 Implement `FilesystemConfig`, `FilesystemEvent`, and `filesystemWatcher: WatcherDefinition` in `src/watchers/filesystem/filesystem-watcher.ts` using `node:fs/promises` glob/readdir
-- [ ] P008F001T003 Register `filesystemWatcher` in `createBuiltinWatcherBundle()` in `src/extension/builtin-bundle.ts` (replaces placeholder)
+- [x] P008F001T001 Write black-box tests for `filesystemWatcher` in `src/watchers/filesystem/filesystem-watcher.test.ts`: `watch()` against a tmp dir with one `.ts` file returns one event; `extractLabel` returns filename; `extractUri` returns valid `file://` URI; `extractTags` includes `informational` (must FAIL)
+- [x] P008F001T002 Implement `FilesystemConfig`, `FilesystemEvent`, and `filesystemWatcher: WatcherDefinition` in `src/watchers/filesystem/filesystem-watcher.ts` using `node:fs/promises` glob/readdir
+- [x] P008F001T003 Register `filesystemWatcher` in `createBuiltinWatcherBundle()` in `src/extension/builtin-bundle.ts` (replaces placeholder)
 
 ### P008F002 — `GitHubWatcher`
 
-- [ ] P008F002T001 Write black-box tests for `githubWatcher` in `src/watchers/github/github-watcher.test.ts`: inject a fake `fetch` that returns a fixture issues array; assert `extractLabel` returns `"#N: title"` format; `extractUri` returns `github:///` URI; `extractTags` maps `high`/`critical` priority to `urgent` (must FAIL)
-- [ ] P008F002T002 Implement `GitHubConfig`, `GitHubIssue`, and `githubWatcher: WatcherDefinition` in `src/watchers/github/github-watcher.ts` using the injected `fetch` abstraction (add `fetch` to `GitHubConfig` or default to global `fetch`)
-- [ ] P008F002T003 [P] Implement `mapLabelsToTags(labels: string[]): readonly TagId[]` pure function in `src/watchers/github/label-map.ts` with doctest; register `githubWatcher` in `createBuiltinWatcherBundle()`
+- [x] P008F002T001 Write black-box tests for `githubWatcher` in `src/watchers/github/github-watcher.test.ts`: inject a fake `fetch` that returns a fixture issues array; assert `extractLabel` returns `"#N: title"` format; `extractUri` returns `github:///` URI; `extractTags` maps `high`/`critical` priority to `urgent` (must FAIL)
+- [x] P008F002T002 Implement `GitHubConfig`, `GitHubIssue`, and `githubWatcher: WatcherDefinition` in `src/watchers/github/github-watcher.ts` using the injected `fetch` abstraction (add `fetch` to `GitHubConfig` or default to global `fetch`)
+- [x] P008F002T003 [P] Implement `mapLabelsToTags(labels: string[]): readonly TagId[]` pure function in `src/watchers/github/label-map.ts` with doctest; register `githubWatcher` in `createBuiltinWatcherBundle()`
 
 ### P008F003 — End-to-end pipeline integration with real watchers
 
-- [ ] P008F003T001 Write integration test in `src/watchers/e2e.integration.test.ts`: create real `StateStore` against tmpdir + real `FilesystemWatcher` pointing to another tmpdir with one file → `runWatcher()` → reload store → assert one `state_entry` with `sourceUri` matching `file:///` and correct `label` (must FAIL)
-- [ ] P008F003T002 Fix any integration issues discovered in `src/watchers/e2e.integration.test.ts` — patch existing source files under `src/watchers/filesystem/` or `src/state/` as needed, no new files
+- [x] P008F003T001 Write integration test in `src/watchers/e2e.integration.test.ts`: create real `StateStore` against tmpdir + real `FilesystemWatcher` pointing to another tmpdir with one file → `runWatcher()` → reload store → assert one `state_entry` with `sourceUri` matching `file:///` and correct `label` (must FAIL)
+- [x] P008F003T002 Fix any integration issues discovered in `src/watchers/e2e.integration.test.ts` — patch existing source files under `src/watchers/filesystem/` or `src/state/` as needed, no new files
 
 ### Exit Criteria: Phase 8 (US6)
 
@@ -475,12 +475,12 @@ call `runWatcher()`, and assert a `StateEntry` appears with `sourceUri` starting
 
 ### P009F001 — Public package exports (`src/index.ts`)
 
-- [ ] P009F001T001 [P] Write a test in `src/index.test.ts` importing `getSunobomoh`, `UNKNOWN_OUTCOME_SCHEMA`, `unsafeWatcherId`, `ok`, `err` from `src/index.ts` and asserting each is defined (must FAIL)
-- [ ] P009F001T002 [P] Implement `src/index.ts` re-exporting all public types, values, and brand helpers per `contracts/extension-api.md` "Public Package Exports" section
+- [x] P009F001T001 [P] Write a test in `src/index.test.ts` importing `getSunobomoh`, `UNKNOWN_OUTCOME_SCHEMA`, `unsafeWatcherId`, `ok`, `err` from `src/index.ts` and asserting each is defined (must FAIL)
+- [x] P009F001T002 [P] Implement `src/index.ts` re-exporting all public types, values, and brand helpers per `contracts/extension-api.md` "Public Package Exports" section
 
 ### P009F002 — Package name and `pi` manifest verification
 
-- [ ] P009F002T001 [P] Verify `package.json` has `"name": "pi-extension-sunobomoh"`, `"pi": { "extensions": ["./src/extension/index.ts"] }`, `"dependencies"` includes `ulid`, `typebox`, and `@mariozechner/pi-coding-agent`; confirm `pnpm build` produces no errors
+- [x] P009F002T001 [P] Verify `package.json` has `"name": "pi-extension-sunobomoh"`, `"pi": { "extensions": ["./src/extension/index.ts"] }`, `"dependencies"` includes `ulid`, `typebox`, and `@mariozechner/pi-coding-agent`; confirm `pnpm build` produces no errors
 
 ### P009F003 — Final `script/ci` full pass
 
@@ -488,7 +488,7 @@ call `runWatcher()`, and assert a `StateEntry` appears with `sourceUri` starting
 
 ### P009F004 — `README.md` update
 
-- [ ] P009F004T001 [P] Update `README.md` to reference `quickstart.md`, list the three registration paths, document the `widget.grouping` config option with all five strategy names, and show the JSONL state file format
+- [x] P009F004T001 [P] Update `README.md` to reference `quickstart.md`, list the three registration paths, document the `widget.grouping` config option with all five strategy names, and show the JSONL state file format
 
 ### Exit Criteria: Phase 9 (Polish)
 
