@@ -1,22 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { add, greet } from './index.ts';
 
-describe('add', () => {
-  it('returns the sum of two positive numbers', () => {
-    expect(add(2, 3)).toBe(5);
+describe('Public package exports', () => {
+  it('should export getSunobomoh', async () => {
+    const mod = await import('./index.js');
+    expect(mod.getSunobomoh).toBeDefined();
   });
 
-  it('returns zero when both inputs are zero', () => {
-    expect(add(0, 0)).toBe(0);
+  it('should export UNKNOWN_OUTCOME_SCHEMA', async () => {
+    const mod = await import('./index.js');
+    expect(mod.UNKNOWN_OUTCOME_SCHEMA).toBeDefined();
   });
 
-  it('handles negative numbers', () => {
-    expect(add(-5, 3)).toBe(-2);
+  it('should export unsafeWatcherId', async () => {
+    const mod = await import('./index.js');
+    expect(mod.unsafeWatcherId).toBeDefined();
   });
-});
 
-describe('greet', () => {
-  it('returns a greeting with the given name', () => {
-    expect(greet('Alice')).toBe('Hello, Alice!');
+  it('should export ok', async () => {
+    const mod = await import('./index.js');
+    expect(mod.ok).toBeDefined();
+  });
+
+  it('should export err', async () => {
+    const mod = await import('./index.js');
+    expect(mod.err).toBeDefined();
   });
 });

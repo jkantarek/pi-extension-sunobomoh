@@ -46,8 +46,15 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 4. **Implement tasks**:
    - Complete tasks in dependency order (non-[P] before parallel [P] where noted)
-   - Follow TDD when appropriate: write tests first, then implementation
-   - Run quality checks after each task (typecheck, lint, test as appropriate)
+   - Follow TDD: write the failing test/doctest (T001 RED), then implement (T002 GREEN)
+   - **After EVERY task**, run all four gates individually and fix any failures before continuing:
+     1. `pnpm typecheck` — zero TypeScript errors
+     2. `pnpm lint` — zero ESLint warnings (`--max-warnings 0`)
+     3. `pnpm format:check` — all files Prettier-clean (run `pnpm format` to auto-fix)
+     4. `pnpm test` — all tests AND inline doctests pass
+   - Do NOT mark a task `[x]` until all four gates above are green
+   - After a T001 (RED) task: confirm tests FAIL before proceeding to T002
+   - After a T002 (GREEN) task: confirm all four gates pass before marking complete
    - Mark each completed task by changing `[ ]` to `[x]` in tasks.md
 
 5. **Commit on user story completion**:
@@ -100,11 +107,21 @@ This signals the ralph loop orchestrator to terminate successfully.
 
 ## Quality Gates
 
-- ALL changes must pass quality checks before marking tasks complete
+Each gate must pass individually after **every task** — do not batch them at end of phase:
+
+| Gate | Command | Requirement |
+|------|---------|-------------|
+| TypeScript | `pnpm typecheck` | Zero errors |
+| Lint | `pnpm lint` | Zero warnings (`--max-warnings 0`) |
+| Format | `pnpm format:check` | All files pass (auto-fix: `pnpm format`) |
+| Tests + Doctests | `pnpm test` | All pass, including `@import.meta.vitest` inline doctests |
+| Coverage (phase exit only) | `pnpm test:coverage` | ≥98% stmts/fns/branches/lines |
+
+- Run coverage (`pnpm test:coverage`) only at **phase exit criteria** checkpoints, not after every task
 - DO NOT commit broken code
+- DO NOT mark a task `[x]` unless all four per-task gates are green
 - Follow existing code patterns (check Codebase Patterns in progress file)
 - Reference plan.md for architecture decisions
-- Run tests if they exist before committing
 
 ## Code Style
 

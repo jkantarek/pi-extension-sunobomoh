@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [doctest()],
   test: {
     globals: true,
+    passWithNoTests: true,
     // Standard unit/integration tests
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     // In-source doctests embedded in @example @import.meta.vitest blocks

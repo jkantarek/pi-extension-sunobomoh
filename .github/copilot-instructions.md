@@ -1,3 +1,11 @@
+<!-- SPECKIT START -->
+## Active Plan
+
+See [specs/001-sunobomoh-watch-engine/plan.md](../specs/001-sunobomoh-watch-engine/plan.md)
+for the current implementation plan, data model, contracts, and quickstart.
+
+<!-- SPECKIT END -->
+
 ## Quality Gates
 
 All of the following MUST pass before marking any task complete or creating a commit:

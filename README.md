@@ -1,6 +1,56 @@
-# ts-ultrastrict-ai
+# Sunobomoh Watch Engine
 
-Ultra-strict TypeScript project template with full AI agent tooling (Speckit + GitHub Copilot).
+A programmable watch-and-react engine for the [pi coding agent](https://github.com/mariozechner/pi). Connect arbitrary data sources (GitHub, Gmail, Slack, filesystem, etc.), hydrate events through a pipeline, tag with multi-outcome metadata, and let an hourly steering step surface items that need attention.
+
+**Status**: Development build — see [`specs/001-sunobomoh-watch-engine/quickstart.md`](specs/001-sunobomoh-watch-engine/quickstart.md) for installation and usage.
+
+## Three Ways to Register Watchers
+
+1. **Config file (built-ins)**: Edit `.pi/sunobomoh.config.json` to activate built-in watchers (`github`, `filesystem`, `slack`, `gmail`) with JSON config. Zero code required.
+2. **Programmatic (custom watchers)**: Call `getSunobomoh().registerWatcher(definition, config)` from a sibling pi extension to register your own `WatcherDefinition`.
+3. **Hybrid**: Use both — activate built-ins via config, register custom watchers programmatically.
+
+## Widget Grouping Strategies
+
+The attention widget (`ctx.ui.setWidget`) supports five grouping strategies via the `widget.grouping` config option:
+
+| Strategy       | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| `none`         | Flat list, no grouping                                    |
+| `tag`          | Group by primary tag (first tag in entry's tag list)      |
+| `source`       | Group by watcher source (`sourceId`)                      |
+| `age`          | Group by age bucket (< 1h, < 6h, < 24h, older)            |
+| `sourceScheme` | Group by URI scheme (github:, file:, slack:, gmail:, etc) |
+
+## JSONL State File Format
+
+All watcher events, tag outcomes, and steering decisions append to `.pi/sunobomoh-state.jsonl` as newline-delimited JSON. Each line is one of four types:
+
+```jsonc
+// State entry (watcher event)
+{
+  "type": "state_entry",
+  "id": "01HZQX...",
+  "sourceId": "github-watcher",
+  "sourceUri": "github://owner/repo/issues/42",
+  "label": "Fix auth timeout",
+  "timestamp": "2026-05-09T10:15:30Z",
+  "tags": ["urgent", "bug"],
+  "outcomes": { "urgent": { "tagId": "urgent", "status": "active" } },
+  "needsAttention": true,
+  "attentionScore": 75,
+  "metadata": { /* ... */ }
+}
+
+// State patch (attention toggle or outcome update)
+{ "type": "state_patch", "entryId": "01HZQX...", "patches": { "needsAttention": false } }
+
+// Steering run (hourly promotion/demotion decisions)
+{ "type": "steering_run", "id": "01HZQY...", "promoted": 3, "demoted": 1, "timestamp": "2026-05-09T11:00:00Z" }
+
+// Scheduler run (watcher tick heartbeat)
+{ "type": "scheduler_run", "id": "01HZQZ...", "watcherIds": ["github-watcher"], "timestamp": "2026-05-09T10:10:00Z" }
+```
 
 ## What's included
 

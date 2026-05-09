@@ -132,6 +132,10 @@ export function clamp(value: number, min: number, max: number): number { … }
 
 ## Testing
 
+> **See also**: [`TESTING.md`](./TESTING.md) — agent-specific guide to testing
+> patterns, coverage gap diagnosis, and strategies learned from real implementation
+> (errors-as-data, port injection, store load ordering, event handler testing).
+
 ### Philosophy: black-box, functional, no mocks
 
 - Tests must exercise the **public API** of a module, not its internals.
@@ -177,6 +181,9 @@ A coverage miss is **not** acceptable technical debt — it is a refactoring sig
 ---
 
 ## Linting & Formatting
+
+> **See also**: [`LINTING.md`](./LINTING.md) — agent-specific guide to lint rule intent,
+> anti-patterns, and how to respond to lint failures without suppressing rules.
 
 ### ESLint — zero warnings allowed
 

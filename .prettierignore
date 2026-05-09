@@ -8,3 +8,4 @@ node_modules/
 AGENTS.md
 .specify/
 pnpm-lock.yaml
+specs/
