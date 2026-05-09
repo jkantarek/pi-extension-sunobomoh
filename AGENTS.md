@@ -178,6 +178,9 @@ A coverage miss is **not** acceptable technical debt — it is a refactoring sig
 
 ## Linting & Formatting
 
+> **See also**: [`LINTING.md`](./LINTING.md) — agent-specific guide to lint rule intent,
+> anti-patterns, and how to respond to lint failures without suppressing rules.
+
 ### ESLint — zero warnings allowed
 
 `eslint . --max-warnings 0` must pass. Rules of note:

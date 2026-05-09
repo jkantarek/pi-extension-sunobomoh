@@ -40,14 +40,12 @@ const classifyEntries = (
   config: SteeringConfig,
 ): { promoted: EntryId[]; demoted: EntryId[]; borderline: EntryId[] } =>
   scores.reduce(
-    (acc, s) => (
-      isPromotable(s, config)
-        ? acc.promoted.push(s.entryId)
-        : isDemotable(s, config)
-          ? acc.demoted.push(s.entryId)
-          : acc.borderline.push(s.entryId),
-      acc
-    ),
+    (acc, s) => {
+      if (isPromotable(s, config)) acc.promoted.push(s.entryId);
+      else if (isDemotable(s, config)) acc.demoted.push(s.entryId);
+      else acc.borderline.push(s.entryId);
+      return acc;
+    },
     { promoted: [] as EntryId[], demoted: [] as EntryId[], borderline: [] as EntryId[] },
   );
 

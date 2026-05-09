@@ -1,11 +1,14 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+import sonarjs from 'eslint-plugin-sonarjs';
 import jsdocExamplesOnly from './eslint-rules/jsdoc-examples-only.mjs';
 
 const localPlugin = {
   rules: { 'jsdoc-examples-only': jsdocExamplesOnly },
 };
+
+const SRC = 'src/**/*.{ts,tsx}';
 
 export default tseslint.config(
   // Files to never lint
@@ -26,8 +29,11 @@ export default tseslint.config(
   js.configs.recommended,
 
   // TypeScript strict + stylistic (scoped to src only)
-  ...tseslint.configs.strictTypeChecked.map((c) => ({ ...c, files: ['src/**/*.{ts,tsx}'] })),
-  ...tseslint.configs.stylisticTypeChecked.map((c) => ({ ...c, files: ['src/**/*.{ts,tsx}'] })),
+  ...tseslint.configs.strictTypeChecked.map((c) => ({ ...c, files: [SRC] })),
+  ...tseslint.configs.stylisticTypeChecked.map((c) => ({ ...c, files: [SRC] })),
+
+  // SonarJS recommended — registers plugin + all recommended rules, scoped to src
+  { ...sonarjs.configs.recommended, files: [SRC] },
 
   // Tooling config files — parse with node tsconfig, light rules only
   {
@@ -46,7 +52,7 @@ export default tseslint.config(
   },
 
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: [SRC],
     plugins: { local: localPlugin },
     languageOptions: {
       parserOptions: {
@@ -110,6 +116,19 @@ export default tseslint.config(
 
       // All JSDoc must be executable @example doctests — no prose, no @param/@returns
       'local/jsdoc-examples-only': 'error',
+
+      // SonarJS overrides — turn off rules duplicated by typescript-eslint,
+      // or rules too noisy for this codebase's conventions
+      'sonarjs/todo-tag': 'off', // teams use TODO comments intentionally
+      'sonarjs/fixme-tag': 'off', // same
+      'sonarjs/no-commented-code': 'off', // commented examples exist in doctests
+      'sonarjs/no-unused-vars': 'off', // @typescript-eslint/no-unused-vars covers this
+      'sonarjs/class-name': 'off', // @typescript-eslint/naming-convention covers this
+      'sonarjs/no-unused-function-argument': 'off', // @typescript-eslint/no-unused-vars covers this
+      'sonarjs/no-parameter-reassignment': 'off', // prefer-const covers this
+      // cognitive-complexity is separate from cyclomatic; allow higher ceiling for
+      // orchestration functions that are inherently sequential
+      'sonarjs/cognitive-complexity': ['error', 15],
     },
   },
 

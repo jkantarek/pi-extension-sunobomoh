@@ -22,7 +22,7 @@ export interface Registry<T> {
 export const createRegistry = <T>(getId: (t: T) => string): Registry<T> => {
   const map = new Map<string, T>();
   return {
-    register: (item: T): void => void map.set(getId(item), item),
+    register: (item) => map.set(getId(item), item),
     get: (id: string) => map.get(id),
     getAll: () => Array.from(map.values()),
     has: (id: string) => map.has(id),

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { writeFile, rm } from 'node:fs/promises';
 import { createStateStore } from './store.js';
@@ -8,8 +9,7 @@ import type { FileSystem } from '../core/ports.js';
 import { makeTestEntryJson } from './test-fixtures.js';
 import type { EntryId } from '../core/brands.js';
 
-const tmpFile = (): string =>
-  join(tmpdir(), `sunobomoh-test-${String(Date.now())}-${String(Math.random())}.jsonl`);
+const tmpFile = (): string => join(tmpdir(), `sunobomoh-test-${randomUUID()}.jsonl`);
 
 describe('StateStore.load()', () => {
   it('loads empty model when file does not exist', async () => {

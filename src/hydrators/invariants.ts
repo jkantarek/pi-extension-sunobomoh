@@ -3,7 +3,7 @@ import type { StateEntry } from '../state/types.js';
 export class HydrationInvariantError extends Error {
   constructor(message: string) {
     super(message);
-    void (this.name = 'HydrationInvariantError');
+    this.name = 'HydrationInvariantError';
   }
 }
 

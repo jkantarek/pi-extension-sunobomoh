@@ -1492,3 +1492,39 @@ These files were completed in P005-P007 and their gaps are defensive code that c
 
 **Next Steps**:
 P008 complete. Next phase is P009 (Polish — public exports, README, final CI verification).
+
+---
+
+## Iteration 20 - 2026-05-09T04:03:00-05:00
+
+**User Story**: P009 Polish & Cross-Cutting Concerns (Partial)
+**Tasks Completed**:
+- [x] P009F001T001: Write test for public exports in src/index.test.ts (RED confirmed)
+- [x] P009F001T002: Implement src/index.ts re-exporting all public types per contracts/extension-api.md
+- [x] P009F002T001: Verified package.json config and pnpm build (zero errors)
+- [x] P009F004T001: Updated README.md with Sunobomoh docs (registration paths, widget.grouping strategies, JSONL format)
+
+**Tasks Remaining in Story**: 1 task blocked
+- [ ] P009F003T001: Run script/ci — BLOCKED by pre-existing branch coverage gap (92.14% < 98%)
+
+**Commit**: 80079c3
+**Files Changed**:
+- src/index.ts (created — public package exports)
+- src/index.test.ts (created — 5 export verification tests)
+- README.md (updated — Sunobomoh-specific docs)
+- specs/001-sunobomoh-watch-engine/tasks.md (marked P009F001, P009F002, P009F004 complete)
+- specs/001-sunobomoh-watch-engine/progress.md (this entry)
+- src/watchers/filesystem/filesystem-watcher.{ts,test.ts} (from prior iteration)
+- src/watchers/github/github-watcher.{ts,test.ts}, label-map.ts (from prior iteration)
+- src/watchers/e2e.integration.test.ts (from prior iteration)
+- src/extension/builtin-bundle.{ts,test.ts} (updated from prior iteration)
+
+**Learnings**:
+- TagOutcome is defined in src/state/types.ts, not src/tags/types.ts — corrected index.ts export path
+- Phase 9 (P009) has a dependency on pre-existing coverage gaps from prior phases (scheduler, extension, steering, ui)
+- Branch coverage threshold violation (92.14% vs 98% required) blocks script/ci completion
+- The coverage gap predates this iteration — visible in: src/extension/index.ts (75%), src/scheduler/scheduler.ts (76.92%), src/steering/steerer.ts (75%), src/ui/scheme-profile.ts (64.28%), src/watchers/github/github-watcher.ts (50%)
+- Per instructions: "Partial progress is fine -- uncompleted tasks will be handled in subsequent iterations"
+- Completed tasks form a coherent unit (public API + docs), warranting partial commit
+
+---

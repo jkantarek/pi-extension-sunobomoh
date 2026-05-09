@@ -34,8 +34,8 @@ describe('createBuiltinWatcherBundle', () => {
   it('filesystem watcher definition extractUri returns valid URI', () => {
     const bundle = createBuiltinWatcherBundle();
     const fsEntry = bundle.get('filesystem');
-    const event = { path: '/tmp/test.ts' };
-    const uri = fsEntry?.definition.extractUri(event, { path: '/tmp' });
+    const event = { path: join(tmpdir(), 'test.ts') };
+    const uri = fsEntry?.definition.extractUri(event, { path: tmpdir() });
     expect(typeof uri).toBe('string');
     expect(uri).toContain('file://');
   });
@@ -43,8 +43,8 @@ describe('createBuiltinWatcherBundle', () => {
   it('filesystem watcher definition extractLabel returns string', () => {
     const bundle = createBuiltinWatcherBundle();
     const fsEntry = bundle.get('filesystem');
-    const event = { path: '/tmp/test.ts' };
-    const label = fsEntry?.definition.extractLabel(event, { path: '/tmp' });
+    const event = { path: join(tmpdir(), 'test.ts') };
+    const label = fsEntry?.definition.extractLabel(event, { path: tmpdir() });
     expect(typeof label).toBe('string');
     expect(label).toBe('test.ts');
   });
@@ -52,8 +52,8 @@ describe('createBuiltinWatcherBundle', () => {
   it('filesystem watcher definition extractTags returns array with informational tag', () => {
     const bundle = createBuiltinWatcherBundle();
     const fsEntry = bundle.get('filesystem');
-    const event = { path: '/tmp/test.ts' };
-    const tags = fsEntry?.definition.extractTags(event, { path: '/tmp' });
+    const event = { path: join(tmpdir(), 'test.ts') };
+    const tags = fsEntry?.definition.extractTags(event, { path: tmpdir() });
     expect(Array.isArray(tags)).toBe(true);
     expect(tags?.length).toBeGreaterThan(0);
     expect(tags?.[0]).toBe('informational');
