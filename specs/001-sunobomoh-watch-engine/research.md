@@ -64,26 +64,28 @@ Each hydrator receives the entries array as enriched by all previous hydrators.
 
 ---
 
-## Decision 4: Side-Effect Model — Active Record Callbacks
+## Decision 4: Side-Effect Model — Active Record Callbacks via Pure Function
 
 **Decision**: Each `WatcherDefinition` carries a `sideEffects: SideEffectDefinition[]`
-array. `SideEffectExecutor` filters by phase and runs matching handlers in array order.
-Six phases: `before_watch`, `after_watch`, `before_hydrate`, `after_hydrate`,
-`before_steer`, `after_steer`.
+array. Two pure functions execute them: `phaseHandlers(phase, defs)` (filter) and
+`runPhase(phase, defs, ctx)` (Chain of Responsibility loop). No `SideEffectExecutor` class.
 
 **Rationale**:
 - Self-contained per watcher: a GitHub watcher can declare its own Slack notification
   side-effect without any global registry magic.
 - Configurable order: index in the array is execution order within a phase.
 - Mirrors Active Record's `before_save`, `after_save` pattern but at the function level.
-- Returning `{ halt: true }` from any handler short-circuits the remaining handlers
-  in that phase (mirrors `throw ActiveRecord::Rollback`).
+- `{ halt: true }` short-circuits remaining handlers (mirrors `throw ActiveRecord::Rollback`).
+- **Pure function, not a class**: `runPhase` has no instance state. All inputs are arguments;
+  all outputs are in the `Result` return. Directly testable by passing arrays of definitions.
 
 **Alternatives considered**:
 - Global event bus side-effects: harder to reason about which watcher triggered what;
   makes testing require global state.
 - Decorator-style (`@BeforeHydrate`): TypeScript decorators are still experimental
   for methods; conflicts with strict tsconfig.
+- `SideEffectExecutor` class: adds instance state with no benefit; constructor injection
+  would be needed anyway, making it equivalent to a plain function.
 
 ---
 
@@ -135,53 +137,178 @@ Custom schemes registered per watcher type:
 
 ---
 
-## Decision 7: Tag Outcomes — TypeBox Schemas per TagDefinition
+## Decision 7: Tag Outcomes — Null Object for Missing Schema
 
-**Decision**: Each `TagDefinition` carries an optional `outcomeSchema: TSchema` (TypeBox).
-When a new `StateEntry` is tagged with a tag that has an `outcomeSchema`, its
-`outcomes[tagId]` is initialized with the schema's default values. Mutations are
-validated against the schema before being written.
+**Decision**: `TagDefinition.outcomeSchema` is **always present** — never `undefined`.
+When no specific outcome shape is needed, set it to `UNKNOWN_OUTCOME_SCHEMA = Type.Unknown()`
+(a TypeBox sentinel that accepts any value). All downstream consumers call
+`Value.Check(def.outcomeSchema, value)` without a null guard.
 
 **Rationale**:
-- Enables per-tag typed outcomes (e.g., a "pr-review" tag can have
-  `{ reviewer: string; approved: boolean }` while a "gmail-thread" tag has
-  `{ replied: boolean; snoozedUntil: string }`).
-- TypeBox is already imported by pi extensions for tool parameter schemas.
-- Runtime validation prevents schema drift between watcher versions.
+- Null Object pattern: eliminates `if (def.outcomeSchema)` guards throughout the codebase.
+- `Type.Unknown()` always passes validation, which is correct for free-form outcomes.
+- TypeBox is already imported; the sentinel is one line.
+- Built-in tags (`urgent`, `needs-review`, etc.) all use `UNKNOWN_OUTCOME_SCHEMA` — no
+  change required at their call sites if a specific schema is later added.
 
 **Alternatives considered**:
-- `zod` for schemas: would add a dependency; TypeBox is already available in the pi runtime.
-- `unknown` outcomes with no validation: violates the "structured object" requirement in the brief.
+- Optional field `outcomeSchema?: TSchema`: forces null checks in every consumer.
+- Separate tagged union for "typed" vs "untyped" TagDefinition: overengineers what
+  is a one-line sentinel value.
 
 ---
 
-## Decision 8: Scheduler State — pi.appendEntry for Heartbeats
+## Decision 8: Scheduler State — Self-Scheduling setTimeout + pi.appendEntry Heartbeats
 
-**Decision**: After each scheduler tick, `pi.appendEntry('sunobomoh:scheduler_tick', { ... })`
-is called to persist the run record. The StateStore ALSO writes a `scheduler_run` line
-to the JSONL file for long-term history. The pi session entry serves only as a
-recovery checkpoint for the current session.
+**Decision**:
+- **Timer**: Self-scheduling `setTimeout` (not `setInterval`). After each tick completes,
+  the next timeout is queued. Drift = only the actual work duration, not interval callback lag.
+- **Clock injection**: The `Clock` port (`src/core/ports.ts`) is injected into `createScheduler()`.
+  Tests pass a synchronous fake clock; no `vi.useFakeTimers()` needed.
+- **Steering trigger**: `shouldRunSteering(lastSteeringAt, now, config): boolean` is a pure
+  predicate in `src/scheduler/should-steer.ts`. No second interval, no shared mutable counter.
+- **Persistence**: After each tick, `pi.appendEntry('sunobomoh:scheduler_tick', { ... })` persists
+  a recovery checkpoint. The StateStore also writes a `scheduler_run` line for long-term history.
 
 **Rationale**:
-- `pi.appendEntry` is designed for exactly this: durable extension state per session.
-- On `session_start`, the extension reads the last `sunobomoh:scheduler_tick` entry
-  to determine whether to fire an immediate catch-up run.
-- Long-term history lives in the JSONL state file, not the session tree.
+- `setInterval` drifts and requires `vi.useFakeTimers()` — a mock — to test. Both are prohibited.
+- `shouldRunSteering` in its own file means all boundary conditions are doctest-able without
+  starting a real scheduler.
+- `pi.appendEntry` is designed for exactly this: durable extension state that survives
+  `/fork`, `/resume`, and session restart.
+
+**Alternatives considered**:
+- `setInterval` with a second interval for steering: two timers drifting independently;
+  requires fake timers to test.
+- Polling a cron expression: adds a dependency; more complexity than a single predicate.
 
 ---
 
-## Decision 9: Coverage Strategy — Pure Functions + Dependency Injection
+## Decision 9: Coverage Strategy — Pure Functions + Dependency Injection via Core Ports
 
-**Decision**: All domain logic (StateStore, WatcherRunner, HydrationPipeline,
-SideEffectExecutor, Steerer, Scheduler) receives its dependencies via constructor
-injection. Filesystem I/O is abstracted behind thin `FileSystem` and `Clock` interfaces
-injected at the point of use. Tests use real implementations against temp files /
-`Date.now()` stubs (no `vi.mock`).
+**Decision**: All domain logic receives its dependencies via the `src/core/ports.ts` interfaces
+(`FileSystem`, `Clock`) injected at factory-function construction time. No global singletons.
+Tests pass real inline implementations (3-5 line objects) against temp files and fixed dates.
 
 **Rationale**:
-- No mocks required: AGENTS.md prohibits them.
-- 98% coverage is achievable because every path is reachable through the public API.
-- `FileSystem` interface is tiny (3 methods) — not a "utils catch-all".
+- No mocks required: AGENTS.md prohibits them. Every I/O seam is behind a 1–3 method interface.
+- 98% coverage is achievable because every code path is reachable through the public API.
+- Inline test implementations are self-documenting — no hidden `__mocks__` directories.
+
+---
+
+## Decision 10: Railway-Oriented Programming — Result<T, E>
+
+**Decision**: Every fallible domain function returns `Result<T, E>` from `src/core/result.ts`.
+Only `src/extension/index.ts` (the façade) catches errors and converts them to
+`ctx.ui.notify` calls.
+
+**Rationale**:
+- Eliminates identical `try/catch` blocks in four modules (WatcherRunner, HydrationPipeline,
+  SideEffectExecutor, Steerer).
+- Makes all failure paths explicit and statically typed.
+- The extension façade is the single error boundary — consistent user-facing error messages.
+
+**Alternatives considered**:
+- Throwing typed errors: forces `try/catch` in every caller; TypeScript does not type
+  thrown exceptions, so callers cannot know what errors to expect.
+- `neverthrow` or `fp-ts`: external dependencies; `Result<T,E>` is 6 lines, not a package.
+
+---
+
+## Decision 11: Branded Primitive Types
+
+**Decision**: Domain identifiers, timestamps, and URIs use branded types (`EntryId`, `WatcherId`,
+`TagId`, `IsoTimestamp`, `ResourceUri`) from `src/core/brands.ts`. Validation happens once
+at the parse/construction boundary. Plain `string` in JSONL wire types only.
+
+**Rationale**:
+- Prevents ID mix-ups (passing a `WatcherId` where `EntryId` is expected) at compile time.
+- Zero runtime cost — brands are type-level only.
+- Eliminates defensive re-validation code scattered across domain functions.
+- `toResourceUri()` validates RFC 3986 syntax once; all downstream code trusts the brand.
+
+**Alternatives considered**:
+- Plain `string` everywhere: no compile-time protection; defensive checks spread throughout.
+- Runtime wrapper objects (`class EntryId { constructor(readonly value: string) {} }`):
+  adds serialization complexity; JSON.stringify produces `{"value":"..."}` not `"..."`.
+
+---
+
+## Decision 12: Generic Registry Factory
+
+**Decision**: `WatcherRegistry` and `TagRegistry` both use `createRegistry<T>()` from
+`src/core/registry.ts`. Domain-specific registry files are ~8-line wrappers.
+
+**Rationale**:
+- The two registries are structurally identical: a `Map`-backed `register/get/getAll/has` API.
+- Implementing twice would be a direct AGENTS.md violation (duplication trigger).
+- `createRegistry<T>(getId)` is 10 lines; the domain wrappers add only the type constraint.
+
+**Alternatives considered**:
+- Separate implementations per domain: identical boilerplate, violates DRY.
+- Class-based registry: adds `new` instantiation with no benefit over a factory function.
+
+---
+
+## Decision 13: Wire Type / In-Memory Type Split for StateEntry
+
+**Decision**: Two separate TypeScript interfaces exist for the same logical entity:
+`StateEntryJson` (JSONL wire — `Record<string, TagOutcomeJson>`, plain `string` fields) and
+`StateEntry` (in-memory — `ReadonlyMap<TagId, TagOutcome>`, branded fields).
+`parseStateEntry()` is the single conversion point, called only inside `StateStore.load()`.
+
+**Rationale**:
+- `noPropertyAccessFromIndexSignature` forbids `entry.outcomes[tagId]` on a `Record`-typed
+  field. `ReadonlyMap<TagId, TagOutcome>` uses `.get(tagId)` — always legal.
+- Brands cannot be serialised directly to JSON without a conversion step.
+- A single conversion boundary is easier to audit than scattered casts.
+
+**Alternatives considered**:
+- Single type with `Record` and `as` casts: compiles but hides the constraint violation.
+- `Map` in JSONL: not JSON-serialisable natively; requires custom replacer/reviver.
+
+---
+
+## Decision 14: Null Object for Tag Outcome Schema
+
+See Decision 7 (revised above) — this is the formal decision record for the Null Object
+application to `TagDefinition.outcomeSchema`.
+
+## Decision 15: ULID with Monotonic Factory over UUID v4
+
+**Decision**: All generated identifiers (`EntryId`, patch ids, run ids) use ULIDs produced by
+`monotonicFactory()` from the `ulid` package. The PRNG is an injectable parameter
+(the "extended randomness variable") supplied via the `IdFactory` port in `src/core/ids.ts`.
+
+**Rationale**:
+- **Time-sortable**: ULID's 48-bit millisecond prefix means JSONL entries sort
+  lexicographically in insertion order — no secondary sort by timestamp needed.
+- **Monotonic within a millisecond**: burst inserts during one scheduler tick are
+  ordered. The 80-bit random portion increments by 1 within the same ms rather than
+  re-randomising, giving sub-ms ordering. This is the "extended" in "extended randomness"
+  — the random bits extend the timestamp resolution beyond milliseconds.
+- **Shorter**: 26 Crockford base32 chars vs 36 UUID chars (with dashes) — 28% smaller
+  on every JSONL line.
+- **Testable without mocks**: the `prng` parameter (the randomness variable) is injectable.
+  Tests pass `() => 0.12345` for a deterministic sequence. No `vi.useFakeTimers()` needed,
+  consistent with the no-mocks constraint.
+- **Offline-safe**: generated without network or coordination, like UUID v4.
+
+**"Extended randomness variable"** specifically means the `prng: () => number` parameter
+to `monotonicFactory()`. By making it injectable, the full ID generation pipeline becomes
+a port — the same pattern as `FileSystem` and `Clock`. `IdFactory` is injected alongside
+`Clock` into every function that creates identifiers (`toStateEntry`, `createStateStore`, etc.).
+
+**Implementation**: `ulid` added to `dependencies` (not `devDependencies`) in `package.json`.
+`defaultIdFactory` is a process-level singleton using `crypto.getRandomValues`.
+
+**Alternatives considered**:
+- **UUID v4** (`crypto.randomUUID()`): no temporal ordering, 36 chars, no injectable prng in
+  Node's built-in — would require `vi.useFakeTimers()` or a separate abstraction for tests.
+- **NanoID**: shorter but not time-sortable; no monotonic mode.
+- **KSUID**: time-sortable, but 27 chars, less ecosystem support in Node.
+- **Sequential integer**: ordering without randomness — collision risk in concurrent ticks.
 
 ---
 

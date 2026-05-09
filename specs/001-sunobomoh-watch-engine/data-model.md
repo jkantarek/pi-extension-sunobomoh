@@ -1,138 +1,213 @@
 # Data Model: Sunobomoh Watch Engine
 
 **Branch**: `001-sunobomoh-watch-engine` | **Date**: 2026-05-07
+**Updated**: architecture-review.md codified — branded types, wire/in-memory split, ReadModel,
+Null Object for outcomeSchema, pure-function entity shapes.
 
 ---
 
 ## Entity Overview
 
 ```
-WatcherDefinition
-  ├── hydrators: HydratorDefinition[]
-  └── sideEffects: SideEffectDefinition[]
-                          │
-                          ▼
-                   WatcherRunner
-                          │ produces
-                          ▼
-                    StateEntry ──────────────────────────► StateStore (JSONL)
-                          │                                      │
-                    TagRegistry                           SteeringRun (JSONL)
-                  applies TagOutcome                     SchedulerRun (JSONL)
-                          │
-                    HydrationPipeline
-                  enriches hydratedData
-                          │
-                    SideEffectExecutor
-                  runs callbacks per phase
+src/core/ (write first — no domain deps)
+  Result<T,E> · EntryId · WatcherId · TagId · IsoTimestamp · ResourceUri
+  Registry<T> · FileSystem · Clock
+                    │ imported by all domains below
+                    ▼
+WatcherDefinition ──► runWatcher() ──► toStateEntry() ──► StateEntry (in-memory)
+  │ hydrators[]         pure fn           pure fn              │
+  │ sideEffects[]                                              │
+  │                                                            ▼
+  └─► runHydrationPipeline()        projectLine(model, line): ReadModel
+        pure fn (for...of reduce)              │
+  │                                      StateStore
+  └─► runPhase()                     (append JSONL · load · expose ReadModel)
+        pure fn (chain of resp.)            │
+                                      StateQuery
+TagRegistry ──► initializeOutcomes()  (immutable fluent builder over ReadModel)
+                  pure fn
+                    │
+              applyTagsToEntry()
+                  pure fn
 ```
 
 ---
 
-## JSONL Line Types
+## Two Representations of StateEntry
 
-The state file is append-only JSONL. Every line is a discriminated union on the `type` field.
+There are two distinct shapes, kept separate to satisfy `noPropertyAccessFromIndexSignature`
+and to isolate JSON serialisation from domain logic.
 
-### `state_entry`
+| Shape | Type name | Location | `outcomes` field | Use |
+|---|---|---|---|---|
+| JSONL wire | `StateEntryJson` | `src/state/types.ts` | `Record<string, TagOutcomeJson>` | Written to / read from disk |
+| In-memory | `StateEntry` | `src/state/types.ts` | `ReadonlyMap<TagId, TagOutcome>` | All domain logic, queries, scoring |
 
-The primary unit. One line per event observed by any watcher.
+Conversion: `parseStateEntry(json: StateEntryJson): StateEntry` at the disk boundary only.
+
+The same two-representation pattern applies to `StatePatch.patch` and the read model indexes.
+
+---
+
+## JSONL Wire Types (disk format)
+
+Every line in `.pi/sunobomoh-state.jsonl` is one of these. Discriminated on `type`.
+All id/uri/timestamp fields are plain `string` here — brands are type-level only.
+
+### `state_entry` wire
 
 ```typescript
-interface StateEntry {
+export interface StateEntryJson {
   readonly type: 'state_entry';
-
-  // Identity
-  readonly id: string;                        // UUID v4 — stable across steering runs
-  readonly sourceId: string;                  // WatcherDefinition.id that produced this
-
-  // External resource link
-  readonly sourceUri: string;                 // RFC 3986 URI — any scheme (github:, file:, slack:, etc.)
-
-  // Timing
-  readonly timestamp: string;                 // ISO 8601 — when the event was observed by the watcher
-  readonly metadata: {
-    readonly watchedAt: string;               // ISO 8601 — same as timestamp (denormalized for clarity)
-    readonly hydratedAt?: string;             // ISO 8601 — when last hydration completed
-    readonly lastSteeringAt?: string;         // ISO 8601 — when last steering decision was applied
-    readonly steeringDecision?: 'promoted' | 'demoted' | 'unchanged';
-  };
-
-  // Classification
-  readonly tags: readonly string[];           // ordered; first tag is "primary"
-  readonly outcomes: Readonly<Record<string, TagOutcome>>;  // keyed by tag id
-
-  // Payload
-  readonly data: unknown;                     // raw watcher event (watcher-specific shape)
-  readonly hydratedData?: unknown;            // post-hydration enrichment (hydrator-specific shape)
-
-  // Attention
+  readonly id: string;                              // ULID (monotonic)
+  readonly sourceId: string;                        // WatcherDefinition.id
+  readonly sourceUri: string;                       // RFC 3986 URI (any scheme)
+  readonly label: string;                           // from WatcherDefinition.extractLabel()
+  readonly timestamp: string;                       // ISO 8601
+  readonly tags: readonly string[];
+  readonly outcomes: Readonly<Record<string, TagOutcomeJson>>;
+  readonly data: unknown;
+  readonly hydratedData?: unknown;
   readonly needsAttention: boolean;
-  readonly attentionScore?: number;           // 0-100 score used by Steerer
+  readonly attentionScore?: number;
+  readonly metadata: StateEntryMetadataJson;
 }
-```
 
-### `tag_outcome`
+export interface StateEntryMetadataJson {
+  readonly watchedAt: string;
+  readonly hydratedAt?: string;
+  readonly lastSteeringAt?: string;
+  readonly steeringDecision?: 'promoted' | 'demoted' | 'unchanged';
+}
 
-Embedded inside `StateEntry.outcomes[tagId]`. Not a top-level line.
-
-```typescript
-interface TagOutcome {
+export interface TagOutcomeJson {
   readonly tagId: string;
   readonly status: 'pending' | 'active' | 'resolved' | 'dismissed';
-  readonly outcome?: unknown;                 // typed by TagDefinition.outcomeSchema if present
-  readonly resolvedAt?: string;               // ISO 8601
+  readonly outcome?: unknown;
+  readonly resolvedAt?: string;
   readonly notes?: string;
 }
 ```
 
-### `steering_run`
-
-Written once per hourly steering pass.
+### `state_patch` wire
 
 ```typescript
-interface SteeringRun {
-  readonly type: 'steering_run';
-  readonly id: string;                        // UUID v4
-  readonly timestamp: string;                 // ISO 8601 — when steering started
-  readonly completedAt: string;               // ISO 8601
-  readonly promoted: readonly string[];       // StateEntry ids moved to needsAttention = true
-  readonly demoted: readonly string[];        // StateEntry ids moved to needsAttention = false
-  readonly unchanged: readonly string[];      // StateEntry ids reviewed but not changed
-  readonly llmAssisted: boolean;
-  readonly summary?: string;                  // LLM-generated summary if llmAssisted
-}
-```
-
-### `scheduler_run`
-
-Written after each scheduler tick (every N minutes).
-
-```typescript
-interface SchedulerRun {
-  readonly type: 'scheduler_run';
-  readonly id: string;
-  readonly timestamp: string;                 // ISO 8601
-  readonly watchersRun: readonly string[];    // WatcherDefinition ids executed
-  readonly entriesCreated: number;
-  readonly errored: readonly { watcherId: string; error: string }[];
-  readonly durationMs: number;
-}
-```
-
-### `state_patch`
-
-Written when a StateEntry is mutated post-creation (e.g., outcome update, manual attention toggle).
-The state store computes the effective current state by replaying patches over the original entry.
-
-```typescript
-interface StatePatch {
+export interface StatePatchJson {
   readonly type: 'state_patch';
-  readonly id: string;                        // UUID v4 for the patch itself
-  readonly targetId: string;                  // StateEntry.id being patched
-  readonly timestamp: string;                 // ISO 8601
-  readonly patch: Partial<Pick<StateEntry, 'needsAttention' | 'attentionScore' | 'outcomes' | 'tags'>>;
+  readonly id: string;
+  readonly targetId: string;
+  readonly timestamp: string;
+  readonly patch: Partial<Pick<StateEntryJson,
+    'needsAttention' | 'attentionScore' | 'outcomes' | 'tags'>>;
   readonly reason?: string;
 }
+```
+
+### `steering_run` wire
+
+```typescript
+export interface SteeringRunJson {
+  readonly type: 'steering_run';
+  readonly id: string;
+  readonly timestamp: string;
+  readonly completedAt: string;
+  readonly promoted: readonly string[];
+  readonly demoted: readonly string[];
+  readonly unchanged: readonly string[];
+  readonly llmAssisted: boolean;
+  readonly summary?: string;
+}
+```
+
+### `scheduler_run` wire
+
+```typescript
+export interface SchedulerRunJson {
+  readonly type: 'scheduler_run';
+  readonly id: string;
+  readonly timestamp: string;
+  readonly watchersRun: readonly string[];
+  readonly entriesCreated: number;
+  readonly errored: readonly { readonly watcherId: string; readonly error: string }[];
+  readonly durationMs: number;
+}
+
+export type StateLineJson =
+  | StateEntryJson
+  | StatePatchJson
+  | SteeringRunJson
+  | SchedulerRunJson;
+```
+
+---
+
+## In-Memory Domain Types
+
+Used by all domain logic after deserialisation. All ids/timestamps/uris are branded.
+
+### `StateEntry` (in-memory)
+
+```typescript
+import type { EntryId, WatcherId, TagId, IsoTimestamp, ResourceUri } from '../core/brands.js';
+
+export interface StateEntry {
+  readonly type: 'state_entry';
+  readonly id: EntryId;
+  readonly sourceId: WatcherId;
+  readonly sourceUri: ResourceUri;
+  readonly label: string;                          // human-readable display name for TUI
+  readonly timestamp: IsoTimestamp;
+  readonly tags: readonly TagId[];
+  readonly outcomes: ReadonlyMap<TagId, TagOutcome>;   // Map, not Record
+  readonly data: unknown;
+  readonly hydratedData?: unknown;
+  readonly needsAttention: boolean;
+  readonly attentionScore?: number;
+  readonly metadata: StateEntryMetadata;
+}
+
+export interface StateEntryMetadata {
+  readonly watchedAt: IsoTimestamp;
+  readonly hydratedAt?: IsoTimestamp;
+  readonly lastSteeringAt?: IsoTimestamp;
+  readonly steeringDecision?: 'promoted' | 'demoted' | 'unchanged';
+}
+
+export interface TagOutcome {
+  readonly tagId: TagId;
+  readonly status: 'pending' | 'active' | 'resolved' | 'dismissed';
+  readonly outcome?: unknown;
+  readonly resolvedAt?: IsoTimestamp;
+  readonly notes?: string;
+}
+```
+
+### `ReadModel` (in-memory projection)
+
+The `StateStore` exposes this after replaying the JSONL log via `projectLine()`.
+All indexes use `Map` — never `Record` — to satisfy `noPropertyAccessFromIndexSignature`.
+
+```typescript
+export interface ReadModel {
+  readonly byId:          ReadonlyMap<EntryId, StateEntry>;
+  readonly byTag:         ReadonlyMap<TagId,     readonly EntryId[]>;
+  readonly bySourceId:    ReadonlyMap<WatcherId,  readonly EntryId[]>;
+  readonly needsAttention: ReadonlySet<EntryId>;
+  readonly lastSteeringRun?: SteeringRunJson;
+  readonly entryCount:    number;
+}
+
+export const emptyModel = (): ReadModel => ({
+  byId:           new Map(),
+  byTag:          new Map(),
+  bySourceId:     new Map(),
+  needsAttention: new Set(),
+  entryCount:     0,
+});
+
+// Pure fold function — the entire state reconstitution logic.
+// StateStore calls: lines.reduce(projectLine, emptyModel())
+export declare const projectLine: (model: ReadModel, line: StateLineJson) => ReadModel;
 ```
 
 ---
@@ -141,71 +216,114 @@ interface StatePatch {
 
 ### WatcherDefinition
 
+Pattern: **Strategy**. One plain object per watcher file — no base class.
+
 ```typescript
-interface WatcherDefinition<TConfig = unknown, TEvent = unknown> {
-  readonly id: string;
+import type { TSchema } from 'typebox';
+import type { WatcherId, TagId, ResourceUri } from '../core/brands.js';
+import type { HydratorDefinition } from '../hydrators/types.js';
+import type { SideEffectDefinition } from '../side-effects/types.js';
+
+export interface WatcherDefinition<TConfig = unknown, TEvent = unknown> {
+  readonly id: WatcherId;
   readonly name: string;
   readonly description: string;
-  readonly configSchema: TSchema;             // TypeBox; validated before watch() is called
+  readonly configSchema: TSchema;
   watch(config: TConfig, signal: AbortSignal): Promise<readonly TEvent[]>;
-  extractUri(event: TEvent, config: TConfig): string;
-  extractTags(event: TEvent, config: TConfig): readonly string[];
+  extractUri(event: TEvent, config: TConfig): ResourceUri;
+  extractLabel(event: TEvent, config: TConfig): string;
+  extractTags(event: TEvent, config: TConfig): readonly TagId[];
   readonly hydrators?: readonly HydratorDefinition[];
   readonly sideEffects?: readonly SideEffectDefinition[];
 }
+
+export interface BoundWatcher<TConfig = unknown> {
+  readonly definition: WatcherDefinition<TConfig>;
+  readonly config: TConfig;
+}
 ```
 
-**State transitions** (internal WatcherRunner FSM):
+**WatcherRunner state machine** (`src/watchers/runner.ts` — pure function):
 
 ```
-idle → watching → hydrating → tagging → persisting → idle
-                     ↓ (error)
-                   errored → idle (next tick)
+before_watch side-effects
+  │ halt? → skip tick for this watcher
+  ▼
+watch() → Result<TEvent[], Error>
+  │ err → record in SchedulerRun.errored, return
+  ▼
+toStateEntry() × N → StateEntry[]   [pure coercion, src/watchers/coerce.ts]
+  ▼
+after_watch side-effects
+  ▼
+runHydrationPipeline() → Result<StateEntry[], HydrationError>
+  ▼
+before_hydrate / after_hydrate side-effects (wrapped around pipeline)
+  ▼
+initializeOutcomes() + applyTagsToEntry()
+  ▼
+Result<readonly StateEntry[], Error>
 ```
 
 ### TagDefinition
 
+Pattern: **Null Object** for `outcomeSchema` — field is always present, never optional.
+Eliminates `if (def.outcomeSchema)` guards throughout the codebase.
+
 ```typescript
-interface TagDefinition {
-  readonly id: string;                        // unique slug, e.g. "pr-review"
-  readonly label: string;                     // display name
+import type { TSchema } from 'typebox';
+import { Type } from 'typebox';
+import type { TagId } from '../core/brands.js';
+
+/** Sentinel schema — accepts any value. Used when no specific outcome shape is needed. */
+export const UNKNOWN_OUTCOME_SCHEMA: TSchema = Type.Unknown();
+
+export interface TagDefinition {
+  readonly id: TagId;
+  readonly label: string;
   readonly description: string;
   readonly defaultStatus: TagOutcome['status'];
-  readonly outcomeSchema?: TSchema;           // TypeBox; if absent, outcome is `unknown`
-  readonly attentionWeight: number;           // 0–10; used in rule-based steering
+  /** Always present. Set to UNKNOWN_OUTCOME_SCHEMA if no specific shape is needed. */
+  readonly outcomeSchema: TSchema;
+  readonly attentionWeight: number;           // 0–10; used in scoring
 }
 ```
 
-**Built-in tags** (always registered, weight defaults):
+**Built-in tags** (registered by `createTagRegistry()` automatically):
 
-| id | label | weight |
-|----|-------|--------|
-| `urgent` | Urgent | 10 |
-| `needs-review` | Needs Review | 7 |
-| `informational` | Informational | 1 |
-| `stale` | Stale | 0 |
+| id | label | weight | outcomeSchema |
+|----|-------|--------|---------------|
+| `urgent` | Urgent | 10 | `UNKNOWN_OUTCOME_SCHEMA` |
+| `needs-review` | Needs Review | 7 | `UNKNOWN_OUTCOME_SCHEMA` |
+| `informational` | Informational | 1 | `UNKNOWN_OUTCOME_SCHEMA` |
+| `stale` | Stale | 0 | `UNKNOWN_OUTCOME_SCHEMA` |
 
 ### SideEffectDefinition
 
+Pattern: **Chain of Responsibility**. `runPhase()` is a pure function — no class.
+`{ halt: true }` maps to `throw ActiveRecord::Rollback`.
+
 ```typescript
-type CallbackPhase =
+import type { WatcherId } from '../core/brands.js';
+
+export type CallbackPhase =
   | 'before_watch'   | 'after_watch'
   | 'before_hydrate' | 'after_hydrate'
   | 'before_steer'   | 'after_steer';
 
-interface SideEffectContext {
+export interface SideEffectContext {
   readonly phase: CallbackPhase;
-  readonly watcherId: string;
-  readonly entries: readonly StateEntry[];    // available after watch; empty in before_watch
-  readonly config: unknown;                  // watcher's validated config
+  readonly watcherId: WatcherId;
+  readonly entries: readonly StateEntry[];
+  readonly config: unknown;
   readonly signal: AbortSignal;
 }
 
-interface SideEffectResult {
-  readonly halt?: boolean;                   // if true, skip remaining handlers in this phase
+export interface SideEffectResult {
+  readonly halt?: boolean;
 }
 
-interface SideEffectDefinition {
+export interface SideEffectDefinition {
   readonly id: string;
   readonly phase: CallbackPhase;
   readonly handler: (ctx: SideEffectContext) => Promise<SideEffectResult | void>;
@@ -215,7 +333,7 @@ interface SideEffectDefinition {
 **Active Record analogy**:
 
 | Active Record | Sunobomoh |
-|--------------|-----------|
+|---|---|
 | `before_save` | `before_watch` |
 | `after_save` | `after_watch` |
 | `before_validation` | `before_hydrate` |
@@ -226,8 +344,11 @@ interface SideEffectDefinition {
 
 ### HydratorDefinition
 
+Pattern: **Middleware**. All hydrators share identical `(entries, signal) => entries` shape.
+`runHydrationPipeline()` is a pure function — a simple `for...of` loop, no class.
+
 ```typescript
-interface HydratorDefinition {
+export interface HydratorDefinition {
   readonly id: string;
   readonly name: string;
   readonly description: string;
@@ -238,30 +359,135 @@ interface HydratorDefinition {
 }
 ```
 
-**Invariant**: A hydrator MUST return the same number of entries it receives. It MAY
-mutate `hydratedData` and `metadata.hydratedAt` on each entry. It MUST NOT change
-`id`, `sourceId`, `sourceUri`, or `timestamp`.
+**Invariants** (enforced by `assertHydrationInvariants()` in `src/hydrators/invariants.ts`):
+- `result.length === input.length`
+- `result[i].id === input[i].id` for all `i`
+- `result[i].sourceId`, `.sourceUri`, `.timestamp` unchanged
 
 ### SchedulerConfig
 
 ```typescript
-interface SchedulerConfig {
-  readonly intervalMinutes: number;           // default: 10
-  readonly steeringIntervalMinutes: number;   // default: 60; must be a multiple of intervalMinutes
-  readonly maxConcurrentWatchers: number;     // default: 3
-  readonly timeoutMs: number;                 // per-watcher timeout; default: 30_000
+export interface SchedulerConfig {
+  readonly intervalMinutes: number;            // default: 10
+  readonly steeringIntervalMinutes: number;    // default: 60 — must be multiple of intervalMinutes
+  readonly maxConcurrentWatchers: number;      // default: 3
+  readonly timeoutMs: number;                  // per-watcher, default: 30_000
 }
 ```
+
+**Scheduler pattern**: Self-scheduling `setTimeout` (not `setInterval`) with injected `Clock`.
+Steering trigger: `shouldRunSteering(lastSteeringAt, now, config): boolean` — pure predicate
+in `src/scheduler/should-steer.ts`.
 
 ### SteeringConfig
 
 ```typescript
-interface SteeringConfig {
-  readonly promoteThreshold: number;          // default: 60 (0-100 score)
-  readonly demoteThreshold: number;           // default: 20
-  readonly recencyDecayHalfLifeHours: number; // default: 24 — score halves every N hours
-  readonly llmSteering: boolean;              // default: false
-  readonly llmBorderlineWindow: number;       // entries within ±10 of thresholds go to LLM
+import type { LlmSteeringStrategy } from '../steering/types.js';
+
+export interface SteeringConfig {
+  readonly promoteThreshold: number;           // default: 60
+  readonly demoteThreshold: number;            // default: 20
+  readonly recencyDecayHalfLifeHours: number;  // default: 24
+  readonly llmSteering: boolean;               // default: false
+  readonly llmBorderlineLimit: number;         // default: 10
+}
+```
+
+**Scoring formula**: `score = Σ(tag.attentionWeight × 10) × 0.5^(ageHours / halfLife)`
+
+**Specification predicates** (`src/steering/classify.ts`):
+- `isPromotable(score, config): boolean`
+- `isDemotable(score, config): boolean`
+- `isBorderline(score, config): boolean`
+
+**LLM strategy** is an injected function type — pi-specific impl lives only in `src/extension/index.ts`.
+
+### SunobomohConfig
+
+The shape of `.pi/sunobomoh.config.json` on disk. Plain strings only — no branded types.
+`$ENV_VAR` references in `config` values are resolved at runtime by `resolveEnvRefs()`.
+
+```typescript
+export interface SunobomohConfig {
+  readonly stateFile?: string;
+  readonly scheduler?: Partial<SchedulerConfig>;
+  readonly steering?: Partial<SteeringConfig>;
+  readonly watchers: readonly WatcherConfigEntry[];
+  /** All widget-related config in one place. */
+  readonly widget?: WidgetUserConfig;
+}
+
+export interface WidgetUserConfig {
+  /** Max total rendered lines (entries + group headers). Default: 8. */
+  readonly maxLines?: number;
+  /**
+   * Grouping strategy. Default: 'none' (sequential by time).
+   *   'none'       — flat list, oldest→newest, no group headers
+   *   'source'     — one section per watcher source, alphabetical
+   *   'tag'        — one section per primary tag, highest attention weight first
+   *   'date'       — Today / Yesterday / This week / Older
+   *   'attention'  — ⚠ Needs attention first, then · Monitoring
+   */
+  readonly grouping?: GroupingStrategyName;
+  /**
+   * Tag id → emoji overrides merged over DEFAULT_TAG_EMOJI.
+   * Custom tag types must be listed here or they render as FALLBACK_EMOJI (🔵).
+   * Example: { "urgent": "🚨", "blocked": "🚫", "my-tag": "🎯" }
+   */
+  readonly tagEmoji?: Readonly<Record<string, string>>;
+  /**
+   * Scheme id → partial profile overrides merged over DEFAULT_SCHEME_PROFILES.
+   * Used to configure base URLs for on-prem tools (Jira, GitLab, self-hosted GitHub, etc.).
+   * Example: { "jira": { "abbr": "ji", "baseUrl": "https://jira.corp.com" } }
+   */
+  readonly schemeProfiles?: Readonly<Record<string, { abbr?: string; baseUrl?: string }>>;
+}
+
+/** String form of GroupingStrategy used in JSON config. */
+export type GroupingStrategyName = 'none' | 'source' | 'tag' | 'date' | 'attention';
+```
+
+**Default `WidgetUserConfig`** (applied by `buildWidgetConfig()` in `extension/index.ts`):
+
+| Field | Default |
+|---|---|
+| `maxLines` | `8` |
+| `grouping` | `'none'` |
+| `tagEmoji` | `{}` (empty — DEFAULT_TAG_EMOJI used as-is) |
+| `schemeProfiles` | `{}` (empty — DEFAULT_SCHEME_PROFILES used as-is) |
+```
+
+### RegisteredWatcherInfo
+
+Runtime view of one watcher as seen by `SunobomohAPI.getRegisteredWatchers()`.
+Combines WatcherRegistry data with ReadModel stats for display in `/sunobomoh:config`.
+
+```typescript
+export interface RegisteredWatcherInfo {
+  readonly id: WatcherId;
+  readonly name: string;
+  readonly description: string;
+  /** 'config' = activated via config file; can be removed by /sunobomoh:config.
+   *  'programmatic' = registered by a sibling pi extension; cannot be removed by /sunobomoh:config. */
+  readonly source: 'config' | 'programmatic';
+  /** Present when source === 'programmatic'. Extension display name for user guidance. */
+  readonly managedBy?: string;
+  readonly lastRunAt?: IsoTimestamp;
+  readonly lastRunError?: string;
+  readonly entryCount: number;
+}
+```
+
+### BuiltinWatcherEntry
+
+One entry in the `BuiltinWatcherBundle` map. Used by the Add flow in `/sunobomoh:config`.
+
+```typescript
+export interface BuiltinWatcherEntry {
+  readonly id: string;               // matches WatcherDefinition.id
+  readonly name: string;             // display name
+  readonly description: string;      // one sentence for the selection list
+  readonly definition: WatcherDefinition;
 }
 ```
 
@@ -269,26 +495,28 @@ interface SteeringConfig {
 
 ## Validation Rules
 
-| Field | Rule |
-|-------|------|
-| `StateEntry.id` | Must be UUID v4 |
-| `StateEntry.sourceUri` | Must satisfy RFC 3986 syntax |
-| `StateEntry.timestamp` | Must be valid ISO 8601 |
-| `StateEntry.tags` | Must be non-empty array; each tag must exist in TagRegistry |
-| `StateEntry.attentionScore` | If present, must be in [0, 100] |
-| `TagOutcome.status` | Must be one of the four status literals |
-| `TagOutcome.outcome` | If `TagDefinition.outcomeSchema` exists, must validate against it |
-| `SchedulerConfig.steeringIntervalMinutes` | Must be a positive multiple of `intervalMinutes` |
-| `SteeringConfig.promoteThreshold` | Must be > `demoteThreshold` |
+| Field | Rule | Where enforced |
+|---|---|---|
+| `StateEntry.id` | ULID (monotonic, 26-char Crockford base32) | `parseStateEntry()` at deserialisation boundary |
+| `StateEntry.sourceUri` | RFC 3986 via `toResourceUri()` | `toStateEntry()` coercion in `coerce.ts` |
+| `StateEntry.timestamp` | Valid ISO 8601 via `toIsoTimestamp()` | `toStateEntry()` |
+| `StateEntry.tags` | Non-empty; each TagId in TagRegistry | `applyTagsToEntry()` |
+| `StateEntry.attentionScore` | 0–100 | `scoreEntry()` |
+| `TagOutcome.status` | One of four literals | TypeBox at outcome initialisation |
+| `TagOutcome.outcome` | Validates against `TagDefinition.outcomeSchema` | `initializeOutcomes()` |
+| `SchedulerConfig.steeringIntervalMinutes` | Positive multiple of `intervalMinutes` | `createScheduler()` |
+| `SteeringConfig.promoteThreshold` | > `demoteThreshold` | `createSteerer()` |
 
 ---
 
-## Indexes (in-memory, rebuilt on load)
+## In-Memory Indexes
 
-| Index | Key | Purpose |
-|-------|-----|---------|
-| `byId` | `StateEntry.id` | O(1) lookup for patches, steering, mark tools |
-| `byTag` | `tag → StateEntry.id[]` | O(1) tag filtering in queries |
-| `bySourceId` | `watcher.id → StateEntry.id[]` | O(1) per-watcher history |
-| `needsAttention` | `Set<StateEntry.id>` | O(1) for UI widget count |
-| `lastSteeringRun` | single `SteeringRun` | fast access for steering scheduler |
+All `Map` — never `Record` — to satisfy `noPropertyAccessFromIndexSignature`.
+
+| Index | Type | Key | Purpose |
+|---|---|---|---|
+| `ReadModel.byId` | `Map<EntryId, StateEntry>` | entry id | O(1) patch lookup, mark tool |
+| `ReadModel.byTag` | `Map<TagId, EntryId[]>` | tag id | O(1) tag filtering |
+| `ReadModel.bySourceId` | `Map<WatcherId, EntryId[]>` | watcher id | O(1) per-watcher history |
+| `ReadModel.needsAttention` | `Set<EntryId>` | — | O(1) widget count |
+| `ReadModel.lastSteeringRun` | `SteeringRunJson \| undefined` | — | steering interval check |

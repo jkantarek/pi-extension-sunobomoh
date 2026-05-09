@@ -1,56 +1,42 @@
 # Contract: Scheduler & Steerer
 
-**Files**: `src/scheduler/types.ts`, `src/steering/types.ts`
+**Files**: `src/scheduler/types.ts`, `src/scheduler/should-steer.ts`, `src/scheduler/scheduler.ts`,
+`src/steering/types.ts`, `src/steering/score-entry.ts`, `src/steering/classify.ts`, `src/steering/steerer.ts`
+
+Patterns: **Self-Scheduling setTimeout** (Scheduler), **Specification** (shouldRunSteering, classify),
+**Pure Function** (scoreEntry), **Strategy** (LlmSteeringStrategy), **Factory Function** (createScheduler, createSteerer).
 
 ---
 
-## SchedulerConfig
+## `src/scheduler/types.ts`
 
 ```typescript
+import type { IsoTimestamp } from '../core/brands.js';
+
 /**
- * Configuration for the polling scheduler.
- * Validated by TypeBox before Scheduler.start() is called.
- *
  * @example
  * ```ts @import.meta.vitest
  * import { DEFAULT_SCHEDULER_CONFIG } from '../scheduler/scheduler.js';
  * expect(DEFAULT_SCHEDULER_CONFIG.intervalMinutes).toBe(10);
  * expect(DEFAULT_SCHEDULER_CONFIG.steeringIntervalMinutes % DEFAULT_SCHEDULER_CONFIG.intervalMinutes).toBe(0);
+ * expect(DEFAULT_SCHEDULER_CONFIG.maxConcurrentWatchers).toBe(3);
  * ```
  */
 export interface SchedulerConfig {
-  /** Minutes between watcher polls. Default: 10. */
-  readonly intervalMinutes: number;
-  /**
-   * Minutes between steering runs. Must be a positive integer multiple of
-   * intervalMinutes. Default: 60.
-   */
-  readonly steeringIntervalMinutes: number;
-  /**
-   * Maximum number of watchers running concurrently within one tick.
-   * Default: 3.
-   */
-  readonly maxConcurrentWatchers: number;
-  /**
-   * Per-watcher abort timeout in milliseconds. Default: 30_000.
-   */
-  readonly timeoutMs: number;
+  readonly intervalMinutes: number;           // default: 10
+  readonly steeringIntervalMinutes: number;   // default: 60 — must be positive multiple of intervalMinutes
+  readonly maxConcurrentWatchers: number;     // default: 3
+  readonly timeoutMs: number;                 // per-watcher abort timeout; default: 30_000
 }
 
 export interface SchedulerState {
   readonly running: boolean;
-  readonly lastTickAt?: string;      // ISO 8601
-  readonly lastSteeringAt?: string;  // ISO 8601
-  readonly nextTickAt?: string;      // ISO 8601
+  readonly lastTickAt?: IsoTimestamp;
+  readonly lastSteeringAt?: IsoTimestamp;
+  readonly nextTickAt?: IsoTimestamp;
   readonly tickCount: number;
 }
-```
 
----
-
-## Scheduler Public API
-
-```typescript
 export interface SchedulerAPI {
   start(): void;
   stop(): void;
@@ -64,108 +50,304 @@ export interface SchedulerAPI {
 
 ---
 
-## SteeringConfig
+## `src/scheduler/should-steer.ts` — Specification Predicate
+
+Pattern: **Specification** — a single pure predicate extracted to its own file.
+All timer-interval boundary conditions are doctestable without starting a scheduler.
 
 ```typescript
+import type { IsoTimestamp } from '../core/brands.js';
+import type { SchedulerConfig } from './types.js';
+
 /**
- * Configuration for the attention-scoring steerer.
- *
- * Scoring formula (rule-based):
- *   score = Σ(tag.attentionWeight * 10) * recencyFactor
- *   recencyFactor = 0.5 ^ (ageHours / recencyDecayHalfLifeHours)
- *
- * Entries with score >= promoteThreshold → needsAttention = true
- * Entries with score <= demoteThreshold  → needsAttention = false
- * Entries in between → unchanged; optionally forwarded to LLM
+ * Pure predicate: should a steering run fire given the last time it ran?
+ * Handles the first-run case (lastSteeringAt undefined → always true).
  *
  * @example
  * ```ts @import.meta.vitest
- * import { DEFAULT_STEERING_CONFIG } from '../steering/steerer.js';
- * expect(DEFAULT_STEERING_CONFIG.promoteThreshold).toBeGreaterThan(
- *   DEFAULT_STEERING_CONFIG.demoteThreshold
- * );
+ * import { shouldRunSteering } from '../scheduler/should-steer.js';
+ * import { toIsoTimestamp } from '../core/brands.js';
+ * const cfg = { intervalMinutes: 10, steeringIntervalMinutes: 60,
+ *               maxConcurrentWatchers: 3, timeoutMs: 30_000 };
+ * const base = new Date('2026-05-07T10:00:00Z');
+ * const now  = toIsoTimestamp(base);
+ *
+ * // First run — no previous steering
+ * expect(shouldRunSteering(undefined, now, cfg)).toBe(true);
+ *
+ * // Just ran — not yet due
+ * expect(shouldRunSteering(now, now, cfg)).toBe(false);
+ *
+ * // Exactly 60 min later — due
+ * const plus60 = toIsoTimestamp(new Date(base.getTime() + 60 * 60_000));
+ * expect(shouldRunSteering(now, plus60, cfg)).toBe(true);
+ *
+ * // 59 min 59 sec later — not yet due
+ * const almostDue = toIsoTimestamp(new Date(base.getTime() + (60 * 60_000 - 1000)));
+ * expect(shouldRunSteering(now, almostDue, cfg)).toBe(false);
  * ```
  */
+export declare const shouldRunSteering: (
+  lastSteeringAt: IsoTimestamp | undefined,
+  now: IsoTimestamp,
+  config: SchedulerConfig,
+) => boolean;
+```
+
+---
+
+## `src/scheduler/scheduler.ts` — Factory Function
+
+Pattern: **Self-Scheduling setTimeout** (not setInterval — avoids drift).
+**Template Method via injection** — the tick structure is fixed; watcher execution and
+steering are injected strategies. **Clock port** is injected — no `vi.useFakeTimers()` needed.
+
+```typescript
+import type { Result } from '../core/result.js';
+import type { Clock } from '../core/ports.js';
+import type { StateEntry } from '../state/types.js';
+import type { WatcherId } from '../core/brands.js';
+
+export type WatcherRunnerFn = (signal: AbortSignal) =>
+  Promise<Result<readonly StateEntry[], Error>>;
+export type SteeringFn = (signal: AbortSignal) =>
+  Promise<Result<void, Error>>;
+
+export const DEFAULT_SCHEDULER_CONFIG: SchedulerConfig = {
+  intervalMinutes: 10,
+  steeringIntervalMinutes: 60,
+  maxConcurrentWatchers: 3,
+  timeoutMs: 30_000,
+};
+
+/**
+ * @example
+ * ```ts @import.meta.vitest
+ * import { createScheduler, DEFAULT_SCHEDULER_CONFIG } from '../scheduler/scheduler.js';
+ * import { ok } from '../core/result.js';
+ * import { toIsoTimestamp } from '../core/brands.js';
+ * let ticks = 0;
+ * const scheduler = createScheduler(
+ *   DEFAULT_SCHEDULER_CONFIG,
+ *   async () => { ticks++; return ok([]); },
+ *   async () => ok(undefined),
+ *   { now: () => toIsoTimestamp(new Date()) },
+ * );
+ * expect(scheduler.state.running).toBe(false);
+ * await scheduler.triggerTick();
+ * expect(ticks).toBe(1);
+ * ```
+ */
+export declare const createScheduler: (
+  config: SchedulerConfig,
+  runWatchers: WatcherRunnerFn,
+  runSteering: SteeringFn,
+  clock: Clock,
+) => SchedulerAPI;
+```
+
+**Self-scheduling pattern** (internal, not exported):
+```typescript
+const tick = async (): Promise<void> => {
+  await runWatchers(signal);
+  if (shouldRunSteering(state.lastSteeringAt, clock.now(), config)) {
+    await runSteering(signal);
+  }
+  if (state.running) {
+    timeoutHandle = setTimeout(tick, config.intervalMinutes * 60_000);
+  }
+};
+```
+This reschedules after work completes, so wall-clock drift accumulates only from
+actual work duration — never from interval callback queuing lag.
+
+---
+
+## `src/steering/types.ts`
+
+```typescript
+import type { EntryId } from '../core/brands.js';
+import type { StateEntry } from '../state/types.js';
+import type { Result } from '../core/result.js';
+
 export interface SteeringConfig {
-  /** Score threshold above which entries get needsAttention = true. Default: 60. */
-  readonly promoteThreshold: number;
-  /** Score threshold below which entries get needsAttention = false. Default: 20. */
-  readonly demoteThreshold: number;
-  /**
-   * Recency decay: score halves every N hours of age. Default: 24.
-   * Set to Infinity to disable recency decay.
-   */
-  readonly recencyDecayHalfLifeHours: number;
-  /**
-   * When true, entries with scores in the borderline window
-   * [demoteThreshold, promoteThreshold] are forwarded to the LLM
-   * for a final attention decision via pi.sendUserMessage.
-   * Default: false.
-   */
-  readonly llmSteering: boolean;
-  /**
-   * Number of borderline entries to send to LLM per steering run.
-   * Prevents token overruns. Default: 10.
-   */
-  readonly llmBorderlineLimit: number;
+  readonly promoteThreshold: number;           // default: 60
+  readonly demoteThreshold: number;            // default: 20 — must be < promoteThreshold
+  readonly recencyDecayHalfLifeHours: number;  // default: 24; Infinity disables decay
+  readonly llmSteering: boolean;               // default: false
+  readonly llmBorderlineLimit: number;         // default: 10 — max entries sent to LLM
 }
 
 export interface AttentionScore {
-  readonly entryId: string;
-  readonly score: number;
+  readonly entryId: EntryId;
+  readonly score: number;                      // 0–100
   readonly breakdown: readonly { tagId: string; contribution: number }[];
-  readonly recencyFactor: number;
+  readonly recencyFactor: number;              // 0–1
   readonly decision: 'promote' | 'demote' | 'borderline';
 }
 
+export interface LlmOverride {
+  readonly entryId: EntryId;
+  readonly decision: 'promote' | 'demote';
+  readonly reason: string;
+}
+
 export interface SteeringResult {
-  readonly promoted: readonly string[];
-  readonly demoted: readonly string[];
-  readonly borderline: readonly string[];
-  readonly llmOverrides: readonly { entryId: string; decision: 'promote' | 'demote' }[];
+  readonly promoted:     readonly EntryId[];
+  readonly demoted:      readonly EntryId[];
+  readonly borderline:   readonly EntryId[];
+  readonly llmOverrides: readonly LlmOverride[];
+}
+
+/**
+ * Strategy type for the optional LLM path.
+ * The pi-specific implementation lives only in src/extension/index.ts (the façade).
+ * Domain code stays pi-agnostic.
+ */
+export type LlmSteeringStrategy = (
+  borderlineEntries: readonly StateEntry[],
+  signal: AbortSignal,
+) => Promise<Result<readonly LlmOverride[], Error>>;
+
+export interface SteererAPI {
+  run(signal: AbortSignal): Promise<Result<SteeringResult, Error>>;
 }
 ```
 
 ---
 
-## Steerer Public API
+## `src/steering/score-entry.ts` — Pure Scoring Function
 
 ```typescript
-export interface SteererAPI {
-  /**
-   * Score all entries and apply promotion/demotion decisions.
-   * Writes StatePatch lines to StateStore for each changed entry.
-   * Writes a SteeringRun line when complete.
-   * Returns the SteeringResult.
-   */
-  run(signal: AbortSignal): Promise<SteeringResult>;
-  scoreEntry(entry: StateEntry): AttentionScore;
-}
+import type { IsoTimestamp } from '../core/brands.js';
+import type { StateEntry } from '../state/types.js';
+import type { TagDefinition } from '../tags/types.js';
+import type { Registry } from '../core/registry.js';
+import type { AttentionScore } from './types.js';
+
+/**
+ * Score one entry. Pure, deterministic, no I/O.
+ * Formula: score = Σ(tag.attentionWeight × 10) × 0.5^(ageHours / halfLife)
+ * Clamped to [0, 100].
+ *
+ * @example
+ * ```ts @import.meta.vitest
+ * import { scoreEntry } from '../steering/score-entry.js';
+ * import { createTagRegistry } from '../tags/registry.js';
+ * import { toIsoTimestamp, unsafeTagId } from '../core/brands.js';
+ * import { makeTestEntry } from '../state/test-fixtures.js';
+ * import { DEFAULT_STEERING_CONFIG } from '../steering/steerer.js';
+ * const registry = createTagRegistry();
+ * const now = toIsoTimestamp(new Date('2026-05-07T10:00:00Z'));
+ * const entry = makeTestEntry({ tags: [unsafeTagId('urgent')] });
+ * const score = scoreEntry(entry, registry, DEFAULT_STEERING_CONFIG, now);
+ * expect(score.score).toBeGreaterThan(0);
+ * expect(score.score).toBeLessThanOrEqual(100);
+ * expect(score.breakdown.length).toBeGreaterThan(0);
+ * ```
+ */
+export declare const scoreEntry: (
+  entry: StateEntry,
+  tagRegistry: Registry<TagDefinition>,
+  config: SteeringConfig,
+  now: IsoTimestamp,
+) => AttentionScore;
 ```
 
 ---
 
-## LLM Steering Protocol
+## `src/steering/classify.ts` — Specification Predicates
 
-When `config.llmSteering = true` and there are borderline entries, the Steerer
-calls `pi.sendUserMessage` with the following structured prompt:
+Three one-liner predicates. No `switch`, no nested ternary. Consumed directly by `steerer.ts`.
 
+```typescript
+import type { AttentionScore } from './types.js';
+import type { SteeringConfig } from './types.js';
+
+/**
+ * @example
+ * ```ts @import.meta.vitest
+ * import { isPromotable, isDemotable, isBorderline } from '../steering/classify.js';
+ * const cfg = { promoteThreshold: 60, demoteThreshold: 20,
+ *               recencyDecayHalfLifeHours: 24, llmSteering: false, llmBorderlineLimit: 10 };
+ * const high:   AttentionScore = { entryId: 'e1' as any, score: 70, breakdown: [], recencyFactor: 1, decision: 'promote' };
+ * const low:    AttentionScore = { entryId: 'e2' as any, score: 10, breakdown: [], recencyFactor: 1, decision: 'demote' };
+ * const middle: AttentionScore = { entryId: 'e3' as any, score: 40, breakdown: [], recencyFactor: 1, decision: 'borderline' };
+ *
+ * expect(isPromotable(high, cfg)).toBe(true);
+ * expect(isDemotable(low, cfg)).toBe(true);
+ * expect(isBorderline(middle, cfg)).toBe(true);
+ * expect(isPromotable(middle, cfg)).toBe(false);
+ * expect(isDemotable(middle, cfg)).toBe(false);
+ * ```
+ */
+export const isPromotable  = (s: AttentionScore, c: SteeringConfig): boolean =>
+  s.score >= c.promoteThreshold;
+export const isDemotable   = (s: AttentionScore, c: SteeringConfig): boolean =>
+  s.score <= c.demoteThreshold;
+export const isBorderline  = (s: AttentionScore, c: SteeringConfig): boolean =>
+  !isPromotable(s, c) && !isDemotable(s, c);
 ```
-[Sunobomoh Steering Request]
 
-The following events are borderline for attention promotion.
-For each entry, respond with either "promote" or "demote" and a brief reason.
+---
 
-Entry github:///owner/repo/issues/42 (score: 38)
-  Tags: needs-review, stale
-  Data: { title: "Fix auth bug", age: "18 hours" }
+## `src/steering/steerer.ts` — Factory Function
 
-Entry file:///home/user/project/src/auth.ts (score: 45)
-  Tags: needs-review
-  Data: { lastModified: "2026-05-06T22:00:00Z", size: 4200 }
+Pattern: **Strategy** for LLM path (injected, optional).
+**Factory Function** — `createSteerer()` replaces a class.
 
-Respond with JSON: [{"id":"<sourceUri>","decision":"promote"|"demote","reason":"..."}]
+```typescript
+import type { Clock } from '../core/ports.js';
+import type { Registry } from '../core/registry.js';
+import type { TagDefinition } from '../tags/types.js';
+import type { StateStoreAPI } from '../state/store.js';
+
+export const DEFAULT_STEERING_CONFIG: SteeringConfig = {
+  promoteThreshold: 60,
+  demoteThreshold: 20,
+  recencyDecayHalfLifeHours: 24,
+  llmSteering: false,
+  llmBorderlineLimit: 10,
+};
+
+/**
+ * @example
+ * ```ts @import.meta.vitest
+ * import { createSteerer, DEFAULT_STEERING_CONFIG } from '../steering/steerer.js';
+ * import { createTagRegistry } from '../tags/registry.js';
+ * import { createStateStore } from '../state/store.js';
+ * import { createNodeFileSystem, createSystemClock } from '../core/ports.js';
+ * import { isOk } from '../core/result.js';
+ * import { tmpdir } from 'node:os';
+ * import { join } from 'node:path';
+ * const store = createStateStore(join(tmpdir(), `steer-test-${Date.now()}.jsonl`),
+ *   createNodeFileSystem(), createSystemClock());
+ * await store.load();
+ * const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), store);
+ * const result = await steerer.run(new AbortController().signal);
+ * expect(isOk(result)).toBe(true);
+ * if (isOk(result)) {
+ *   expect(result.value.promoted).toHaveLength(0);
+ *   expect(result.value.demoted).toHaveLength(0);
+ * }
+ * ```
+ */
+export declare const createSteerer: (
+  config: SteeringConfig,
+  tagRegistry: Registry<TagDefinition>,
+  store: StateStoreAPI,
+  llmStrategy?: LlmSteeringStrategy,   // absent = rule-only; pi impl injected in extension/index.ts
+  clock?: Clock,
+) => SteererAPI;
 ```
 
-The Steerer parses the LLM's JSON response and applies the overrides as `StatePatch`
-records with `reason` set to the LLM's rationale string.
+**Steerer run sequence**:
+1. Load all entries from `store.model.byId`
+2. `scoreEntry()` each → `AttentionScore[]`
+3. Partition by `isPromotable / isDemotable / isBorderline`
+4. If `config.llmSteering && llmStrategy && borderline.length > 0`:
+   - Call `llmStrategy(borderlineEntries.slice(0, config.llmBorderlineLimit), signal)`
+   - Apply overrides
+5. Write `StatePatchJson` for each changed entry via `store.append()`
+6. Write `SteeringRunJson` via `store.append()`
+7. Return `ok(SteeringResult)`

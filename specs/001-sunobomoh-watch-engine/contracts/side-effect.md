@@ -1,9 +1,12 @@
 # Contract: SideEffectDefinition (Active Record Callbacks)
 
-**File**: `src/side-effects/types.ts`
+**Files**: `src/side-effects/types.ts`, `src/side-effects/executor.ts`
+
+Patterns: **Chain of Responsibility** (halt-able loop), **Pure Function** (runPhase — no class),
+**Railway-Oriented Programming** (Result return).
 
 Side effects are the Active Record callback layer. They are declared on each
-`WatcherDefinition` and executed by `SideEffectExecutor` at the appropriate phase.
+`WatcherDefinition` and executed by the `runPhase()` pure function at each lifecycle phase.
 
 ---
 
@@ -23,6 +26,7 @@ they appear in `watcher.sideEffects`.
 ## Interfaces
 
 ```typescript
+import type { WatcherId } from '../core/brands.js';
 import type { StateEntry } from '../state/types.js';
 
 /**
@@ -60,7 +64,7 @@ export interface SideEffectContext {
   /** The phase in which this handler is being called. */
   readonly phase: CallbackPhase;
   /** Id of the watcher that owns this side effect. */
-  readonly watcherId: string;
+  readonly watcherId: WatcherId;
   /**
    * Entries available at this phase.
    * Empty for before_watch; populated for after_watch and later phases.
@@ -108,16 +112,83 @@ export interface SideEffectDefinition {
 
 ---
 
-## Execution Contract
+## `src/side-effects/executor.ts` — Pure Functions
 
-`SideEffectExecutor.run(phase, watcherId, entries, config, signal)`:
+No class. Two exported pure functions. No instance state.
 
-1. Filter `watcher.sideEffects` to handlers where `handler.phase === phase`.
-2. Execute in array order. Each handler receives an immutable `SideEffectContext`.
-3. If handler returns `{ halt: true }`, stop executing remaining handlers for this phase.
-4. If handler throws, log the error, emit `sunobomoh:side_effect_error` on `pi.events`,
-   and continue with the next handler (errors do NOT halt unless the handler returns `{ halt: true }`).
-5. Return the list of handlers that ran and whether any halted.
+```typescript
+import type { Result } from '../core/result.js';
+import type { WatcherId } from '../core/brands.js';
+import type { StateEntry } from '../state/types.js';
+
+export interface PhaseRunResult {
+  readonly halted: boolean;
+  readonly ranCount: number;
+}
+
+export interface SideEffectError {
+  readonly definitionId: string;
+  readonly cause: Error;
+}
+
+/**
+ * Filter definitions to a single phase. Pure, synchronous.
+ *
+ * @example
+ * ```ts @import.meta.vitest
+ * import { phaseHandlers } from '../side-effects/executor.js';
+ * const defs = [
+ *   { id: 'a', phase: 'before_watch' as const, handler: async () => {} },
+ *   { id: 'b', phase: 'after_watch'  as const, handler: async () => {} },
+ * ];
+ * expect(phaseHandlers('before_watch', defs)).toHaveLength(1);
+ * expect(phaseHandlers('after_hydrate', defs)).toHaveLength(0);
+ * ```
+ */
+export declare const phaseHandlers: (
+  phase: CallbackPhase,
+  defs: readonly SideEffectDefinition[],
+) => readonly SideEffectDefinition[];
+
+/**
+ * Run phase-matched handlers in array order. Returns Result — never throws.
+ * On { halt: true } from any handler, stops and returns { halted: true }.
+ * On thrown error, records it and continues to next handler (errors ≠ halt).
+ *
+ * @example
+ * ```ts @import.meta.vitest
+ * import { runPhase } from '../side-effects/executor.js';
+ * import { isOk } from '../core/result.js';
+ * import { unsafeWatcherId } from '../core/brands.js';
+ * const haltingDef = {
+ *   id: 'halt', phase: 'before_watch' as const,
+ *   handler: async () => ({ halt: true as const }),
+ * };
+ * const ctx = { phase: 'before_watch' as const, watcherId: unsafeWatcherId('w'),
+ *               entries: [], config: {}, signal: new AbortController().signal };
+ * const result = await runPhase('before_watch', [haltingDef], ctx);
+ * expect(isOk(result)).toBe(true);
+ * if (isOk(result)) {
+ *   expect(result.value.halted).toBe(true);
+ *   expect(result.value.ranCount).toBe(1);
+ * }
+ * ```
+ */
+export declare const runPhase: (
+  phase: CallbackPhase,
+  defs: readonly SideEffectDefinition[],
+  ctx: SideEffectContext,
+) => Promise<Result<PhaseRunResult, SideEffectError>>;
+```
+
+**Execution Contract**:
+1. `phaseHandlers(phase, defs)` filters in O(n).
+2. `runPhase` iterates the filtered list in array order.
+3. Each handler receives an immutable `SideEffectContext`.
+4. `{ halt: true }` → stop; return `ok({ halted: true, ranCount: n })`.
+5. Thrown error → record as `SideEffectError`, continue next handler.
+   (Errors do NOT halt. Only `{ halt: true }` halts.)
+6. Returns `Result` — the extension façade decides whether to surface errors.
 
 ---
 
