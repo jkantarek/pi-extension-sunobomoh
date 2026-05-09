@@ -1,12 +1,11 @@
 import type { Clock } from '../core/ports.js';
-import { toError } from '../core/errors.js';
 import type { Registry } from '../core/registry.js';
 import type { TagDefinition } from '../tags/types.js';
 import type { StateStoreAPI } from '../state/store.js';
 import type {
   SteeringConfig,
   SteererAPI,
-  SteeringResult,
+  SteeringOutcome,
   LlmSteeringStrategy,
   AttentionScore,
   LlmOverride,
@@ -15,10 +14,9 @@ import { scoreEntry } from './score-entry.js';
 import { isPromotable, isDemotable } from './classify.js';
 import { ok, err, type Result } from '../core/result.js';
 import { createSystemClock } from '../core/ports.js';
-import { defaultIdFactory } from '../core/ids.js';
 import type { EntryId, IsoTimestamp } from '../core/brands.js';
 import type { StateEntry } from '../state/types.js';
-import { buildPromotions, buildDemotions, buildOverrides, type StatePatch } from './patches.js';
+import { buildAllPatches, buildSteeringRun, buildOutcome } from './patches.js';
 
 /**
  * @example
@@ -50,6 +48,11 @@ const classifyEntries = (
     { promoted: [] as EntryId[], demoted: [] as EntryId[], borderline: [] as EntryId[] },
   );
 
+interface LlmResult {
+  readonly overrides: readonly LlmOverride[];
+  readonly error?: Error;
+}
+
 // eslint-disable-next-line max-lines-per-function -- Orchestration: strategy call + limit check + map
 const applyLlm = async (
   ids: readonly EntryId[],
@@ -57,7 +60,7 @@ const applyLlm = async (
   strategy: LlmSteeringStrategy,
   config: SteeringConfig,
   signal: AbortSignal,
-): Promise<readonly LlmOverride[]> => {
+): Promise<LlmResult> => {
   const result = await strategy(
     ids
       .slice(0, config.llmBorderlineLimit)
@@ -65,37 +68,10 @@ const applyLlm = async (
       .filter((e): e is StateEntry => e !== undefined),
     signal,
   );
-  return result.ok ? result.value : [];
+  if (result.ok) return { overrides: result.value };
+  const raw = result.error;
+  return { overrides: [], error: raw instanceof Error ? raw : new Error(String(raw)) };
 };
-
-interface SteeringRunLine {
-  readonly type: 'steering_run';
-  readonly id: string;
-  readonly timestamp: IsoTimestamp;
-  readonly completedAt: IsoTimestamp;
-  readonly promoted: readonly EntryId[];
-  readonly demoted: readonly EntryId[];
-  readonly unchanged: readonly EntryId[];
-  readonly llmAssisted: boolean;
-}
-
-// eslint-disable-next-line max-lines-per-function -- Pure factory: object construction with 8 fields
-const buildSteeringRun = (
-  p: readonly EntryId[],
-  d: readonly EntryId[],
-  b: readonly EntryId[],
-  llm: boolean,
-  n: IsoTimestamp,
-): SteeringRunLine => ({
-  type: 'steering_run' as const,
-  id: defaultIdFactory.next(),
-  timestamp: n,
-  completedAt: n,
-  promoted: p,
-  demoted: d,
-  unchanged: b,
-  llmAssisted: llm,
-});
 
 const scoreAllEntries = (
   store: StateStoreAPI,
@@ -105,31 +81,18 @@ const scoreAllEntries = (
 ): AttentionScore[] =>
   Array.from(store.model.byId.values()).map((e) => scoreEntry(e, tagRegistry, config, now));
 
-const getLlmOverrides = async (
+const getLlmOverrides = (
   borderline: readonly EntryId[],
   config: SteeringConfig,
   llmStrategy: LlmSteeringStrategy | undefined,
   store: StateStoreAPI,
   signal: AbortSignal,
-): Promise<readonly LlmOverride[]> =>
+): Promise<LlmResult> =>
   config.llmSteering && llmStrategy !== undefined && borderline.length > 0
-    ? await applyLlm(borderline, store, llmStrategy, config, signal)
-    : [];
+    ? applyLlm(borderline, store, llmStrategy, config, signal)
+    : Promise.resolve({ overrides: [] });
 
-// eslint-disable-next-line max-lines-per-function -- Array concatenation: 3 patch builders
-const buildAllPatches = (
-  promoted: readonly EntryId[],
-  demoted: readonly EntryId[],
-  llmOverrides: readonly LlmOverride[],
-  store: StateStoreAPI,
-  now: IsoTimestamp,
-): readonly StatePatch[] => [
-  ...buildPromotions(promoted, store, now),
-  ...buildDemotions(demoted, store, now),
-  ...buildOverrides(llmOverrides, store, now),
-];
-
-// eslint-disable-next-line max-lines-per-function -- Factory closure pattern: state + run method
+// eslint-disable-next-line max-lines-per-function -- Factory: single method in object
 export const createSteerer = (
   config: SteeringConfig,
   tagRegistry: Registry<TagDefinition>,
@@ -137,24 +100,27 @@ export const createSteerer = (
   llmStrategy?: LlmSteeringStrategy,
   clock: Clock = createSystemClock(),
 ): SteererAPI => ({
-  // eslint-disable-next-line max-lines-per-function -- Orchestration: score + classify + llm + patch + append
-  run: async (signal: AbortSignal): Promise<Result<SteeringResult>> => {
-    try {
-      const now = clock.now();
-      const { promoted, demoted, borderline } = classifyEntries(
-        scoreAllEntries(store, tagRegistry, config, now),
-        config,
-      );
-      const llmOverrides = await getLlmOverrides(borderline, config, llmStrategy, store, signal);
-      const appendResult = await store.append([
-        ...buildAllPatches(promoted, demoted, llmOverrides, store, now),
-        buildSteeringRun(promoted, demoted, borderline, llmOverrides.length > 0, now),
-      ]);
-      return appendResult.ok
-        ? ok({ promoted, demoted, borderline, llmOverrides })
-        : err(appendResult.error);
-    } catch (e) {
-      return err(toError(e));
-    }
+  // eslint-disable-next-line max-lines-per-function -- Orchestration: classify + llm + append + outcome
+  run: async (signal: AbortSignal): Promise<Result<SteeringOutcome>> => {
+    const now = clock.now();
+    const { promoted, demoted, borderline } = classifyEntries(
+      scoreAllEntries(store, tagRegistry, config, now),
+      config,
+    );
+    const { overrides, error: llmError } = await getLlmOverrides(
+      borderline,
+      config,
+      llmStrategy,
+      store,
+      signal,
+    );
+    const appendResult = await store.append([
+      ...buildAllPatches(promoted, demoted, overrides, store, now),
+      buildSteeringRun(promoted, demoted, borderline, overrides.length > 0, now),
+    ]);
+    const usedLlm = overrides.length > 0;
+    return appendResult.ok
+      ? ok(buildOutcome(promoted, demoted, borderline, usedLlm, llmError))
+      : err(appendResult.error);
   },
 });

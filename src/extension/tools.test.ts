@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildWatchQueryTool, buildMarkAttentionTool, buildTriggerSteerTool } from './tools.js';
 import type { StateStoreAPI } from '../state/store.js';
-import type { SteererAPI } from '../steering/types.js';
+import type { SteererAPI, SteeringOutcome } from '../steering/types.js';
 import { ok } from '../core/result.js';
 import { emptyModel } from '../state/read-model.js';
 import { unsafeEntryId } from '../core/brands.js';
@@ -50,7 +50,9 @@ describe('buildTriggerSteerTool', () => {
   it('returns a valid tool definition with correct name, parameters schema, and execute', () => {
     const steerer: SteererAPI = {
       run: () =>
-        Promise.resolve(ok({ promoted: [], demoted: [], borderline: [], llmOverrides: [] })),
+        Promise.resolve(
+          ok<SteeringOutcome>({ promoted: [], demoted: [], borderline: [], usedLlm: false }),
+        ),
     };
     const tool = buildTriggerSteerTool(steerer);
     expect(tool.name).toBe('watch_trigger_steer');
@@ -88,11 +90,11 @@ describe('buildTriggerSteerTool execute', () => {
     const steerer: SteererAPI = {
       run: async () =>
         Promise.resolve(
-          ok({
+          ok<SteeringOutcome>({
             promoted: [unsafeEntryId('id1'), unsafeEntryId('id2')],
             demoted: [unsafeEntryId('id3')],
             borderline: [],
-            llmOverrides: [],
+            usedLlm: false,
           }),
         ),
     };

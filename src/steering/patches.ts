@@ -1,7 +1,7 @@
 import type { EntryId, IsoTimestamp } from '../core/brands.js';
 import type { StateStoreAPI } from '../state/store.js';
 import { defaultIdFactory } from '../core/ids.js';
-import type { LlmOverride } from './types.js';
+import type { LlmOverride, SteeringOutcome } from './types.js';
 
 export interface StatePatch {
   readonly type: 'state_patch';
@@ -67,3 +67,56 @@ export const buildOverrides = (
         `llm:${override.decision}`,
       ),
     );
+
+export interface SteeringRunLine {
+  readonly type: 'steering_run';
+  readonly id: string;
+  readonly timestamp: IsoTimestamp;
+  readonly completedAt: IsoTimestamp;
+  readonly promoted: readonly EntryId[];
+  readonly demoted: readonly EntryId[];
+  readonly unchanged: readonly EntryId[];
+  readonly llmAssisted: boolean;
+}
+
+// eslint-disable-next-line max-lines-per-function -- Pure factory: object construction with 8 fields
+export const buildSteeringRun = (
+  p: readonly EntryId[],
+  d: readonly EntryId[],
+  b: readonly EntryId[],
+  llm: boolean,
+  n: IsoTimestamp,
+): SteeringRunLine => ({
+  type: 'steering_run' as const,
+  id: defaultIdFactory.next(),
+  timestamp: n,
+  completedAt: n,
+  promoted: p,
+  demoted: d,
+  unchanged: b,
+  llmAssisted: llm,
+});
+
+// eslint-disable-next-line max-lines-per-function -- Array concatenation: 3 patch builders
+export const buildAllPatches = (
+  promoted: readonly EntryId[],
+  demoted: readonly EntryId[],
+  llmOverrides: readonly LlmOverride[],
+  store: StateStoreAPI,
+  now: IsoTimestamp,
+): readonly StatePatch[] => [
+  ...buildPromotions(promoted, store, now),
+  ...buildDemotions(demoted, store, now),
+  ...buildOverrides(llmOverrides, store, now),
+];
+
+export const buildOutcome = (
+  promoted: readonly EntryId[],
+  demoted: readonly EntryId[],
+  borderline: readonly EntryId[],
+  usedLlm: boolean,
+  llmError: Error | undefined,
+): SteeringOutcome =>
+  llmError !== undefined
+    ? { promoted, demoted, borderline, usedLlm, llmError }
+    : { promoted, demoted, borderline, usedLlm };

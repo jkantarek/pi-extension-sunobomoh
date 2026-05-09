@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getSunobomoh, _setSunobomohInstance } from './api.js';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import type { Result } from '../core/result.js';
+import type { SteeringOutcome } from '../steering/types.js';
 import { err } from '../core/result.js';
 
 /**
@@ -243,7 +244,8 @@ describe('API edge cases', () => {
     factory(mockPi);
 
     const api = getSunobomoh();
-    const result: Result<void> = (await api?.triggerSteering()) ?? err(new Error('API undefined'));
+    const result: Result<SteeringOutcome> =
+      (await api?.triggerSteering()) ?? err(new Error('API undefined'));
     expect(result.ok).toBe(true);
   });
 });

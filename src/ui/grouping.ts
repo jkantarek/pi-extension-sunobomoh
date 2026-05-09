@@ -152,52 +152,49 @@ const buildAttentionGroups = (
   return groups;
 };
 
+interface TagGroup {
+  readonly tag: string;
+  readonly entries: StateEntry[];
+}
+
 const groupByTag = (
   entries: readonly StateEntry[],
   emojiMap: ReadonlyMap<string, string>,
-): readonly Group[] => {
-  const { byTag, order } = collectByTag(entries);
-  return buildTagGroups(order, byTag, emojiMap);
+): readonly Group[] => buildTagGroupsFromMap(collectTagGroups(entries), emojiMap);
+
+const ensureGroup = (tag: string, groups: TagGroup[], idx: Map<string, TagGroup>): TagGroup => {
+  const existing = idx.get(tag);
+  if (existing) return existing;
+  const g: TagGroup = { tag, entries: [] };
+  groups.push(g);
+  idx.set(tag, g);
+  return g;
 };
 
-const collectByTag = (
-  entries: readonly StateEntry[],
-): { byTag: Map<string, StateEntry[]>; order: string[] } => {
-  const byTag = new Map<string, StateEntry[]>();
-  const order: string[] = [];
-  for (const entry of entries) processTagEntry(entry, byTag, order);
-  return { byTag, order };
-};
-
-const processTagEntry = (
+const addEntryToGroup = (
   entry: StateEntry,
-  byTag: Map<string, StateEntry[]>,
-  order: string[],
+  groups: TagGroup[],
+  index: Map<string, TagGroup>,
 ): void => {
   const tag = entry.tags[0];
   if (!tag) return;
-  updateTagMap(tag, entry, byTag, order);
+  ensureGroup(tag, groups, index).entries.push(entry);
 };
 
-const updateTagMap = (
-  tag: string,
-  entry: StateEntry,
-  byTag: Map<string, StateEntry[]>,
-  order: string[],
-): void => {
-  const list = byTag.get(tag);
-  if (!list) order.push(tag);
-  byTag.set(tag, [...(list ?? []), entry]);
+const collectTagGroups = (entries: readonly StateEntry[]): readonly TagGroup[] => {
+  const groups: TagGroup[] = [];
+  const index = new Map<string, TagGroup>();
+  for (const entry of entries) addEntryToGroup(entry, groups, index);
+  return groups;
 };
 
-const buildTagGroups = (
-  order: readonly string[],
-  byTag: ReadonlyMap<string, StateEntry[]>,
+const buildTagGroupsFromMap = (
+  groups: readonly TagGroup[],
   emojiMap: ReadonlyMap<string, string>,
 ): readonly Group[] =>
-  order.map((tag) => ({
+  groups.map(({ tag, entries }) => ({
     header: `${emojiMap.get(tag) ?? '🔵'} ${tag}`,
-    entries: byTag.get(tag) ?? [],
+    entries,
   }));
 
 const groupBySource = (entries: readonly StateEntry[]): readonly Group[] => {

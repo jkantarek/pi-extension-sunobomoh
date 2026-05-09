@@ -76,9 +76,11 @@ export function buildTriggerSteerTool(steerer: SteererAPI): ToolDefinition {
     execute: async (): Promise<{ content: string }> => {
       const result = await steerer.run(new AbortController().signal);
       if (!isOk(result)) return { content: 'Failed to run steering' };
-      const promoted = String(result.value.promoted.length);
-      const demoted = String(result.value.demoted.length);
-      return { content: `Promoted: ${promoted}, Demoted: ${demoted}` };
+      const { promoted, demoted, llmError } = result.value;
+      const note = llmError !== undefined ? ` (LLM unavailable: ${llmError.message})` : '';
+      return {
+        content: `Promoted: ${String(promoted.length)}, Demoted: ${String(demoted.length)}${note}`,
+      };
     },
   };
 }

@@ -37,6 +37,7 @@ export const _setSunobomohInstance = (api: SunobomohAPI | undefined): void => {
 
 import type { Result } from '../core/result.js';
 import type { SchedulerState } from '../scheduler/types.js';
+import type { SteeringOutcome } from '../steering/types.js';
 
 export interface SunobomohAPI {
   registerWatcher: (definition: unknown, config: unknown) => void;
@@ -46,6 +47,6 @@ export interface SunobomohAPI {
   unregisterWatcher: (id: unknown) => void;
   query: () => unknown;
   triggerTick: () => Promise<Result<void>>;
-  triggerSteering: () => Promise<Result<void>>;
+  triggerSteering: () => Promise<Result<SteeringOutcome>>;
   schedulerState: SchedulerState;
 }

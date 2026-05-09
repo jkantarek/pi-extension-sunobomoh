@@ -24,11 +24,12 @@ export interface LlmOverride {
   readonly reason: string;
 }
 
-export interface SteeringResult {
+export interface SteeringOutcome {
   readonly promoted: readonly EntryId[];
   readonly demoted: readonly EntryId[];
   readonly borderline: readonly EntryId[];
-  readonly llmOverrides: readonly LlmOverride[];
+  readonly usedLlm: boolean;
+  readonly llmError?: Error;
 }
 
 export type LlmSteeringStrategy = (
@@ -37,5 +38,5 @@ export type LlmSteeringStrategy = (
 ) => Promise<Result<readonly LlmOverride[]>>;
 
 export interface SteererAPI {
-  run(signal: AbortSignal): Promise<Result<SteeringResult>>;
+  run(signal: AbortSignal): Promise<Result<SteeringOutcome>>;
 }

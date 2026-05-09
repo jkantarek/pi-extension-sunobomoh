@@ -3,7 +3,7 @@ import { createSteerer, DEFAULT_STEERING_CONFIG } from './steerer.js';
 import { createTagRegistry } from '../tags/registry.js';
 import { createStateStore, type StateStoreAPI } from '../state/store.js';
 import { createNodeFileSystem, createSystemClock } from '../core/ports.js';
-import { isOk, ok, type Result } from '../core/result.js';
+import { isOk, ok, err, type Result } from '../core/result.js';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { LlmOverride } from './types.js';
@@ -38,9 +38,7 @@ describe('createSteerer', () => {
     const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), store);
     const result = await steerer.run(new AbortController().signal);
     expect(isOk(result)).toBe(true);
-    if (isOk(result)) {
-      expect(result.value.promoted).toHaveLength(0);
-    }
+    if (isOk(result)) expect(result.value.promoted).toHaveLength(0);
   });
 
   it('high-scoring entry gets promoted', async () => {
@@ -50,9 +48,7 @@ describe('createSteerer', () => {
     const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), store);
     const result = await steerer.run(new AbortController().signal);
     expect(isOk(result)).toBe(true);
-    if (isOk(result)) {
-      expect(result.value.promoted.length).toBeGreaterThan(0);
-    }
+    if (isOk(result)) expect(result.value.promoted.length).toBeGreaterThan(0);
   });
 
   it('low-scoring entry gets demoted', async () => {
@@ -63,16 +59,35 @@ describe('createSteerer', () => {
     const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), store);
     const result = await steerer.run(new AbortController().signal);
     expect(isOk(result)).toBe(true);
+    if (isOk(result)) expect(result.value.demoted.length).toBeGreaterThan(0);
+  });
+
+  it('llmStrategy failure is captured as llmError on the outcome (log-and-continue)', async () => {
+    const store = await createTmpStore('llm-fail');
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    await store.append([
+      createEntry('01J3XYZ1234567890ABCDEFGHK', ['needs-review'], twelveHoursAgo),
+    ]);
+    const failingLlm = (
+      _: readonly StateEntry[],
+      __: AbortSignal,
+    ): Promise<Result<readonly LlmOverride[]>> =>
+      Promise.resolve(err(new Error('LLM unavailable')));
+    const config = { ...DEFAULT_STEERING_CONFIG, llmSteering: true };
+    const steerer = createSteerer(config, createTagRegistry(), store, failingLlm);
+    const result = await steerer.run(new AbortController().signal);
+    // run() still succeeds — LLM failure is data, not a hard error
+    expect(isOk(result)).toBe(true);
     if (isOk(result)) {
-      expect(result.value.demoted.length).toBeGreaterThan(0);
+      expect(result.value.llmError).toBeInstanceOf(Error);
+      expect(result.value.llmError?.message).toContain('LLM unavailable');
     }
   });
 
   it('llmStrategy can override borderline entries', async () => {
     const store = await createTmpStore('override');
-    // needs-review (weight 7) at 12 hours ago → score ~35 → borderline (20-60)
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-    const entries = [createEntry('01J3XYZ1234567890ABCDEFGHK', ['needs-review'], twelveHoursAgo)];
+    const entries = [createEntry('01J3XYZ1234567890ABCDEFGHM', ['needs-review'], twelveHoursAgo)];
     await store.append(entries);
     const mockLlm = (
       _entries: readonly StateEntry[],
@@ -81,9 +96,9 @@ describe('createSteerer', () => {
       Promise.resolve(
         ok([
           {
-            entryId: unsafeEntryId('01J3XYZ1234567890ABCDEFGHK'),
+            entryId: unsafeEntryId('01J3XYZ1234567890ABCDEFGHM'),
             decision: 'promote',
-            reason: 'LLM says so',
+            reason: 'LLM',
           },
         ]),
       );
@@ -92,7 +107,8 @@ describe('createSteerer', () => {
     const result = await steerer.run(new AbortController().signal);
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
-      expect(result.value.llmOverrides.length).toBeGreaterThan(0);
+      expect(result.value.usedLlm).toBe(true);
+      expect(result.value.llmError).toBeUndefined();
     }
   });
 

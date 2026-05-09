@@ -9,6 +9,7 @@ import { createSteerer, DEFAULT_STEERING_CONFIG } from '../steering/steerer.js';
 import { createNodeFileSystem, createSystemClock } from '../core/ports.js';
 import { createStateQuery } from '../state/query.js';
 import { ok, err, type Result } from '../core/result.js';
+import type { SteeringOutcome } from '../steering/types.js';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { SchedulerState, SchedulerAPI } from '../scheduler/types.js';
@@ -60,11 +61,8 @@ export default function (pi: ExtensionAPI): void {
       await scheduler.triggerTick();
       return ok(undefined);
     },
-    triggerSteering: async (): Promise<Result<void>> => {
-      const result = await steerer.run(new AbortController().signal);
-      if (result.ok) return ok(undefined);
-      return result;
-    },
+    triggerSteering: (signal = new AbortController().signal): Promise<Result<SteeringOutcome>> =>
+      steerer.run(signal),
     get schedulerState(): SchedulerState {
       return scheduler?.state ?? { running: false, tickCount: 0 };
     },
