@@ -247,43 +247,43 @@ Call `triggerTick()` and assert `runWatchers` was called once. Call `triggerStee
 
 ### P005F001 — Scheduler config and state types
 
-- [ ] P005F001T001 [P] Write inline doctest asserting `DEFAULT_SCHEDULER_CONFIG.intervalMinutes === 10` and `steeringIntervalMinutes % intervalMinutes === 0` in `src/scheduler/scheduler.ts` (must FAIL)
-- [ ] P005F001T002 [P] Define `SchedulerConfig`, `SchedulerState`, `SchedulerAPI` interfaces in `src/scheduler/types.ts` and `DEFAULT_SCHEDULER_CONFIG` constant in `src/scheduler/scheduler.ts`
+- [x] P005F001T001 [P] Write inline doctest asserting `DEFAULT_SCHEDULER_CONFIG.intervalMinutes === 10` and `steeringIntervalMinutes % intervalMinutes === 0` in `src/scheduler/scheduler.ts` (must FAIL)
+- [x] P005F001T002 [P] Define `SchedulerConfig`, `SchedulerState`, `SchedulerAPI` interfaces in `src/scheduler/types.ts` and `DEFAULT_SCHEDULER_CONFIG` constant in `src/scheduler/scheduler.ts`
 
 ### P005F002 — `shouldRunSteering()` pure predicate
 
-- [ ] P005F002T001 Write inline doctests for all four boundary cases of `shouldRunSteering(lastSteeringAt, now, config)`: first run (undefined), just ran, exactly due, not yet due in `src/scheduler/should-steer.ts` (must FAIL)
-- [ ] P005F002T002 Implement `shouldRunSteering()` pure predicate in `src/scheduler/should-steer.ts`
+- [x] P005F002T001 Write inline doctests for all four boundary cases of `shouldRunSteering(lastSteeringAt, now, config)`: first run (undefined), just ran, exactly due, not yet due in `src/scheduler/should-steer.ts` (must FAIL)
+- [x] P005F002T002 Implement `shouldRunSteering()` pure predicate in `src/scheduler/should-steer.ts`
 
 ### P005F003 — `createScheduler()` factory
 
-- [ ] P005F003T001 Write black-box tests for `createScheduler(config, runWatchers, runSteering, clock)` in `src/scheduler/scheduler.test.ts`: `state.running` starts false; `triggerTick()` calls `runWatchers` once; `triggerSteering()` calls `runSteering` once; `stop()` prevents further ticks (must FAIL)
-- [ ] P005F003T002 Implement `createScheduler()` with self-scheduling `setTimeout` pattern (not `setInterval`) in `src/scheduler/scheduler.ts`; inject `clock` and strategies
+- [x] P005F003T001 Write black-box tests for `createScheduler(config, runWatchers, runSteering, clock)` in `src/scheduler/scheduler.test.ts`: `state.running` starts false; `triggerTick()` calls `runWatchers` once; `triggerSteering()` calls `runSteering` once; `stop()` prevents further ticks (must FAIL)
+- [x] P005F003T002 Implement `createScheduler()` with self-scheduling `setTimeout` pattern (not `setInterval`) in `src/scheduler/scheduler.ts`; inject `clock` and strategies
 
 ### P005F004 — Steering config and score types
 
-- [ ] P005F004T001 [P] Write inline doctest asserting `DEFAULT_STEERING_CONFIG.promoteThreshold > DEFAULT_STEERING_CONFIG.demoteThreshold` in `src/steering/steerer.ts` (must FAIL)
-- [ ] P005F004T002 [P] Define `SteeringConfig`, `AttentionScore`, `LlmOverride`, `SteeringResult`, `LlmSteeringStrategy` types in `src/steering/types.ts` and `DEFAULT_STEERING_CONFIG` constant in `src/steering/steerer.ts`
+- [x] P005F004T001 [P] Write inline doctest asserting `DEFAULT_STEERING_CONFIG.promoteThreshold > DEFAULT_STEERING_CONFIG.demoteThreshold` in `src/steering/steerer.ts` (must FAIL)
+- [x] P005F004T002 [P] Define `SteeringConfig`, `AttentionScore`, `LlmOverride`, `SteeringResult`, `LlmSteeringStrategy` types in `src/steering/types.ts` and `DEFAULT_STEERING_CONFIG` constant in `src/steering/steerer.ts`
 
 ### P005F005 — `scoreEntry()` pure scoring function
 
-- [ ] P005F005T001 Write inline doctests for `scoreEntry(entry, tagRegistry, config, now)`: urgent tag produces high score, stale tag produces near-zero, score decays with age, clamps to [0, 100] in `src/steering/score-entry.ts` (must FAIL)
-- [ ] P005F005T002 Implement `scoreEntry()` using formula `Σ(tag.attentionWeight × 10) × 0.5^(ageHours / halfLife)` clamped to [0, 100] in `src/steering/score-entry.ts`
+- [x] P005F005T001 Write inline doctests for `scoreEntry(entry, tagRegistry, config, now)`: urgent tag produces high score, stale tag produces near-zero, score decays with age, clamps to [0, 100] in `src/steering/score-entry.ts` (must FAIL)
+- [x] P005F005T002 Implement `scoreEntry()` using formula `Σ(tag.attentionWeight × 10) × 0.5^(ageHours / halfLife)` clamped to [0, 100] in `src/steering/score-entry.ts`
 
 ### P005F006 — `isPromotable`, `isDemotable`, `isBorderline` specifications
 
-- [ ] P005F006T001 [P] Write inline doctests for all three predicates (high score promotes, low score demotes, mid score is borderline, non-overlapping cases) in `src/steering/classify.ts` (must FAIL)
-- [ ] P005F006T002 [P] Implement `isPromotable`, `isDemotable`, `isBorderline` as one-liner exported functions in `src/steering/classify.ts`
+- [x] P005F006T001 [P] Write inline doctests for all three predicates (high score promotes, low score demotes, mid score is borderline, non-overlapping cases) in `src/steering/classify.ts` (must FAIL)
+- [x] P005F006T002 [P] Implement `isPromotable`, `isDemotable`, `isBorderline` as one-liner exported functions in `src/steering/classify.ts`
 
 ### P005F007 — `createSteerer()` factory
 
-- [ ] P005F007T001 Write black-box test for `createSteerer(config, tagRegistry, store)` in `src/steering/steerer.test.ts`: empty store runs without error; high-scoring entry gets promoted (`needsAttention = true` patch appended); low-scoring entry gets demoted; `SteeringRun` line appended; `LlmSteeringStrategy` called for borderline entries (must FAIL)
-- [ ] P005F007T002 Implement `createSteerer()` orchestrating `scoreEntry()`, `isPromotable/isDemotable/isBorderline()`, `store.append(patches + steeringRun)` in `src/steering/steerer.ts`
+- [x] P005F007T001 Write black-box test for `createSteerer(config, tagRegistry, store)` in `src/steering/steerer.test.ts`: empty store runs without error; high-scoring entry gets promoted (`needsAttention = true` patch appended); low-scoring entry gets demoted; `SteeringRun` line appended; `LlmSteeringStrategy` called for borderline entries (must FAIL)
+- [x] P005F007T002 Implement `createSteerer()` orchestrating `scoreEntry()`, `isPromotable/isDemotable/isBorderline()`, `store.append(patches + steeringRun)` in `src/steering/steerer.ts`
 
 ### P005F008 — Scheduler + steerer integration
 
-- [ ] P005F008T001 Write integration test in `src/scheduler/scheduler-steering.integration.test.ts`: `createScheduler` with `shouldRunSteering` returning true → `triggerTick()` calls both watcher runner AND steerer → store has both `scheduler_run` and `steering_run` entries (must FAIL)
-- [ ] P005F008T002 Wire `shouldRunSteering` check into `createScheduler` tick execution in `src/scheduler/scheduler.ts` to call `runSteering` when due
+- [x] P005F008T001 Write integration test in `src/scheduler/scheduler-steering.integration.test.ts`: `createScheduler` with `shouldRunSteering` returning true → `triggerTick()` calls both watcher runner AND steerer → store has both `scheduler_run` and `steering_run` entries (must FAIL)
+- [x] P005F008T002 Wire `shouldRunSteering` check into `createScheduler` tick execution in `src/scheduler/scheduler.ts` to call `runSteering` when due
 
 ### Exit Criteria: Phase 5 (US3)
 
@@ -309,48 +309,48 @@ Call `getSunobomoh()` before and after `_setSunobomohInstance` — assert undefi
 
 ### P006F001 — Config domain types
 
-- [ ] P006F001T001 [P] Write inline doctest for `isWidgetUserConfig` type-guard (valid and missing-field cases) in `src/config/types.ts` (must FAIL)
-- [ ] P006F001T002 [P] Define `SunobomohConfig`, `WidgetUserConfig`, `WatcherConfigEntry`, `RegisteredWatcherInfo`, `BuiltinWatcherEntry`, `GroupingStrategyName` types and `isWidgetUserConfig` guard in `src/config/types.ts`
+- [x] P006F001T001 [P] Write inline doctest for `isWidgetUserConfig` type-guard (valid and missing-field cases) in `src/config/types.ts` (must FAIL)
+- [x] P006F001T002 [P] Define `SunobomohConfig`, `WidgetUserConfig`, `WatcherConfigEntry`, `RegisteredWatcherInfo`, `BuiltinWatcherEntry`, `GroupingStrategyName` types and `isWidgetUserConfig` guard in `src/config/types.ts`
 
 ### P006F002 — `resolveEnvRefs()` pure function
 
-- [ ] P006F002T001 [P] Write inline doctests for `resolveEnvRefs(config, env)`: string passthrough, `$VAR` resolution, missing var returns `''`, nested object and array traversal in `src/config/env-resolve.ts` (must FAIL)
-- [ ] P006F002T002 [P] Implement `resolveEnvRefs(config, env?)` recursive pure function in `src/config/env-resolve.ts`
+- [x] P006F002T001 [P] Write inline doctests for `resolveEnvRefs(config, env)`: string passthrough, `$VAR` resolution, missing var returns `''`, nested object and array traversal in `src/config/env-resolve.ts` (must FAIL)
+- [x] P006F002T002 [P] Implement `resolveEnvRefs(config, env?)` recursive pure function in `src/config/env-resolve.ts`
 
 ### P006F003 — `createConfigStore()` — load, save, addWatcher, removeWatcher
 
-- [ ] P006F003T001 Write black-box tests for `createConfigStore(path, fs)` in `src/config/store.test.ts`: `load()` on non-existent file returns default config; `addWatcher` persists and returns updated config; duplicate `addWatcher` replaces; `removeWatcher` deletes; `removeWatcher` on unknown id is a no-op `ok` (must FAIL)
-- [ ] P006F003T002 Implement `createConfigStore()` in `src/config/store.ts` using injected `FileSystem`; atomic write via tmp-file-then-rename pattern
+- [x] P006F003T001 Write black-box tests for `createConfigStore(path, fs)` in `src/config/store.test.ts`: `load()` on non-existent file returns default config; `addWatcher` persists and returns updated config; duplicate `addWatcher` replaces; `removeWatcher` deletes; `removeWatcher` on unknown id is a no-op `ok` (must FAIL)
+- [x] P006F003T002 Implement `createConfigStore()` in `src/config/store.ts` using injected `FileSystem`; atomic write via tmp-file-then-rename pattern
 
 ### P006F004 — `isSecretField()` heuristic
 
-- [ ] P006F004T001 [P] Write inline doctest for `isSecretField`: `token`, `apiKey`, `clientSecret`, `password`, `credential` → true; `owner`, `repoName`, `baseUrl` → false in `src/config/schema-form.ts` (must FAIL)
-- [ ] P006F004T002 [P] Implement `isSecretField(fieldName): boolean` and stub `collectSchemaValues` declaration in `src/config/schema-form.ts`
+- [x] P006F004T001 [P] Write inline doctest for `isSecretField`: `token`, `apiKey`, `clientSecret`, `password`, `credential` → true; `owner`, `repoName`, `baseUrl` → false in `src/config/schema-form.ts` (must FAIL)
+- [x] P006F004T002 [P] Implement `isSecretField(fieldName): boolean` and stub `collectSchemaValues` declaration in `src/config/schema-form.ts`
 
 ### P006F005 — `SunobomohAPI` singleton: `getSunobomoh` + `_setSunobomohInstance`
 
-- [ ] P006F005T001 [P] Write inline doctest for `getSunobomoh()` → undefined initially; after `_setSunobomohInstance(fake)` → returns fake in `src/extension/api.ts` (must FAIL)
-- [ ] P006F005T002 [P] Implement module-level singleton, `getSunobomoh()`, `_setSunobomohInstance()`, and `SunobomohAPI` interface (with all methods including the three added in review: `getRegisteredWatchers`, `getAvailableBuiltins`, `unregisterWatcher`) in `src/extension/api.ts`
+- [x] P006F005T001 [P] Write inline doctest for `getSunobomoh()` → undefined initially; after `_setSunobomohInstance(fake)` → returns fake in `src/extension/api.ts` (must FAIL)
+- [x] P006F005T002 [P] Implement module-level singleton, `getSunobomoh()`, `_setSunobomohInstance()`, and `SunobomohAPI` interface (with all methods including the three added in review: `getRegisteredWatchers`, `getAvailableBuiltins`, `unregisterWatcher`) in `src/extension/api.ts`
 
 ### P006F006 — `createBuiltinWatcherBundle()`
 
-- [ ] P006F006T001 [P] Write inline doctest for `createBuiltinWatcherBundle()`: bundle is non-empty, `has('filesystem')`, each entry has `id === key` and `definition.watch` is a function in `src/extension/builtin-bundle.ts` (must FAIL)
-- [ ] P006F006T002 [P] Implement `createBuiltinWatcherBundle()` returning a `ReadonlyMap<string, BuiltinWatcherEntry>` with a placeholder `filesystem` entry (real implementation deferred to P008) in `src/extension/builtin-bundle.ts`
+- [x] P006F006T001 [P] Write inline doctest for `createBuiltinWatcherBundle()`: bundle is non-empty, `has('filesystem')`, each entry has `id === key` and `definition.watch` is a function in `src/extension/builtin-bundle.ts` (must FAIL)
+- [x] P006F006T002 [P] Implement `createBuiltinWatcherBundle()` returning a `ReadonlyMap<string, BuiltinWatcherEntry>` with a placeholder `filesystem` entry (real implementation deferred to P008) in `src/extension/builtin-bundle.ts`
 
 ### P006F007 — pi LLM tools: `buildWatchQueryTool`, `buildMarkAttentionTool`, `buildTriggerSteerTool`
 
-- [ ] P006F007T001 Write black-box tests for all three tool builder functions in `src/extension/tools.test.ts`: each returns a valid tool definition with correct `name`, `parameters` schema, and `execute` function that returns `content` (must FAIL)
-- [ ] P006F007T002 Implement `buildWatchQueryTool(store)`, `buildMarkAttentionTool(store)`, `buildTriggerSteerTool(steerer)` in `src/extension/tools.ts`
+- [x] P006F007T001 Write black-box tests for all three tool builder functions in `src/extension/tools.test.ts`: each returns a valid tool definition with correct `name`, `parameters` schema, and `execute` function that returns `content` (must FAIL)
+- [x] P006F007T002 Implement `buildWatchQueryTool(store)`, `buildMarkAttentionTool(store)`, `buildTriggerSteerTool(steerer)` in `src/extension/tools.ts`
 
 ### P006F008 — pi commands: config, watch, state, steer
 
-- [ ] P006F008T001 Write black-box tests for `buildConfigCommand`, `buildWatchCommand`, `buildStateCommand`, `buildSteerCommand` in `src/extension/commands.test.ts`: each returns a `CommandDefinition` with correct `name` and `handler` function (must FAIL)
-- [ ] P006F008T002 Implement all four command builder functions in `src/extension/commands.ts` using pi's `ctx.ui.select`, `ctx.ui.input`, `ctx.ui.confirm`, `ctx.ui.notify` (no custom TUI needed)
+- [x] P006F008T001 Write black-box tests for `buildConfigCommand`, `buildWatchCommand`, `buildStateCommand`, `buildSteerCommand` in `src/extension/commands.test.ts`: each returns a `CommandDefinition` with correct `name` and `handler` function (must FAIL)
+- [x] P006F008T002 Implement all four command builder functions in `src/extension/commands.ts` using pi's `ctx.ui.select`, `ctx.ui.input`, `ctx.ui.confirm`, `ctx.ui.notify` (no custom TUI needed)
 
 ### P006F009 — `extension/index.ts` DI wiring and pi factory
 
-- [ ] P006F009T001 Write integration test in `src/extension/index.integration.test.ts` verifying that after loading the factory, `getSunobomoh()` is defined and `schedulerState.running` is false (must FAIL)
-- [ ] P006F009T002 Implement the pi extension default export factory in `src/extension/index.ts`: instantiate all domain objects, call `_setSunobomohInstance`, register `session_start`/`session_shutdown` handlers, register commands, tools, and implement `LlmSteeringStrategy` via `pi.sendUserMessage`
+- [x] P006F009T001 Write integration test in `src/extension/index.integration.test.ts` verifying that after loading the factory, `getSunobomoh()` is defined and `schedulerState.running` is false (must FAIL)
+- [x] P006F009T002 Implement the pi extension default export factory in `src/extension/index.ts`: instantiate all domain objects, call `_setSunobomohInstance`, register `session_start`/`session_shutdown` handlers, register commands, tools, and implement `LlmSteeringStrategy` via `pi.sendUserMessage`
 
 ### Exit Criteria: Phase 6 (US4)
 
@@ -377,38 +377,38 @@ model and assert returned lines contain emoji, label text, source abbreviation, 
 
 ### P007F001 — Widget and grouping types
 
-- [ ] P007F001T001 [P] Define `WidgetConfig`, `SchemeProfile`, `AgeColorName`, `RenderedEntryLine`, `GroupingStrategy`, `Group` interfaces and `DEFAULT_GROUPING` constant in `src/ui/types.ts` (no logic — types only)
+- [x] P007F001T001 [P] Define `WidgetConfig`, `SchemeProfile`, `AgeColorName`, `RenderedEntryLine`, `GroupingStrategy`, `Group` interfaces and `DEFAULT_GROUPING` constant in `src/ui/types.ts` (no logic — types only)
 
 ### P007F002 — `osc8Link()`
 
-- [ ] P007F002T001 [P] Write inline doctest for `osc8Link(text, url)`: contains OSC sequence and text; `osc8Link(text, undefined)` returns plain text in `src/ui/hyperlink.ts` (must FAIL)
-- [ ] P007F002T002 [P] Implement `osc8Link(text: string, url: string | undefined): string` in `src/ui/hyperlink.ts`
+- [x] P007F002T001 [P] Write inline doctest for `osc8Link(text, url)`: contains OSC sequence and text; `osc8Link(text, undefined)` returns plain text in `src/ui/hyperlink.ts` (must FAIL)
+- [x] P007F002T002 [P] Implement `osc8Link(text: string, url: string | undefined): string` in `src/ui/hyperlink.ts`
 
 ### P007F003 — Tag emoji registry
 
-- [ ] P007F003T001 [P] Write inline doctests for `createTagEmojiMap(overrides)`: built-in preserved, override replaces, custom tag added; `emojiForTag` returns `FALLBACK_EMOJI` for unknown tag in `src/ui/tag-emoji.ts` (must FAIL)
-- [ ] P007F003T002 [P] Implement `DEFAULT_TAG_EMOJI`, `FALLBACK_EMOJI`, `createTagEmojiMap()`, `emojiForTag()` in `src/ui/tag-emoji.ts`
+- [x] P007F003T001 [P] Write inline doctests for `createTagEmojiMap(overrides)`: built-in preserved, override replaces, custom tag added; `emojiForTag` returns `FALLBACK_EMOJI` for unknown tag in `src/ui/tag-emoji.ts` (must FAIL)
+- [x] P007F003T002 [P] Implement `DEFAULT_TAG_EMOJI`, `FALLBACK_EMOJI`, `createTagEmojiMap()`, `emojiForTag()` in `src/ui/tag-emoji.ts`
 
 ### P007F004 — Scheme profiles and URI resolution
 
-- [ ] P007F004T001 [P] Write inline doctests for `DEFAULT_SCHEME_PROFILES`: github resolves to `https://github.com/...`, `shortId` extracts `#42`; file URI passes through; `resolveScheme` returns profile for known scheme, undefined for unknown; `sourceLabel` formats `gh:#42` in `src/ui/scheme-profile.ts` (must FAIL)
-- [ ] P007F004T002 [P] Implement `DEFAULT_SCHEME_PROFILES` map, `resolveScheme()`, `sourceLabel()` in `src/ui/scheme-profile.ts`
+- [x] P007F004T001 [P] Write inline doctests for `DEFAULT_SCHEME_PROFILES`: github resolves to `https://github.com/...`, `shortId` extracts `#42`; file URI passes through; `resolveScheme` returns profile for known scheme, undefined for unknown; `sourceLabel` formats `gh:#42` in `src/ui/scheme-profile.ts` (must FAIL)
+- [x] P007F004T002 [P] Implement `DEFAULT_SCHEME_PROFILES` map, `resolveScheme()`, `sourceLabel()` in `src/ui/scheme-profile.ts`
 
 ### P007F005 — Temporal utilities
 
-- [ ] P007F005T001 [P] Write inline doctests for `relativeTime(ms)` (all thresholds: s, m, h, d) and `ageColorName(ms, needsAttention)` (all three color levels + needsAttention override) in `src/ui/temporal.ts` (must FAIL)
-- [ ] P007F005T002 [P] Implement `relativeTime()` and `ageColorName()` in `src/ui/temporal.ts`
+- [x] P007F005T001 [P] Write inline doctests for `relativeTime(ms)` (all thresholds: s, m, h, d) and `ageColorName(ms, needsAttention)` (all three color levels + needsAttention override) in `src/ui/temporal.ts` (must FAIL)
+- [x] P007F005T002 [P] Implement `relativeTime()` and `ageColorName()` in `src/ui/temporal.ts`
 
 ### P007F006 — `groupEntries()` Strategy
 
-- [ ] P007F006T001 Write inline doctests for `groupEntries()` for all five strategies: `none` produces one group with no header; `attention` produces two groups attention-first; `tag` produces per-tag groups sorted by max score desc; `source` produces per-sourceId groups alphabetically; empty entries returns `[]` in `src/ui/grouping.ts` (must FAIL)
-- [ ] P007F006T002 Implement `groupEntries(entries, strategy, emojiMap, nowMs)` pure function with all five strategy branches in `src/ui/grouping.ts`
-- [ ] P007F006T003 Refactor `src/ui/grouping.ts` if file exceeds 100 non-comment lines — extract per-strategy logic as private unexported helper functions within the same file
+- [x] P007F006T001 Write inline doctests for `groupEntries()` for all five strategies: `none` produces one group with no header; `attention` produces two groups attention-first; `tag` produces per-tag groups sorted by max score desc; `source` produces per-sourceId groups alphabetically; empty entries returns `[]` in `src/ui/grouping.ts` (must FAIL)
+- [x] P007F006T002 Implement `groupEntries(entries, strategy, emojiMap, nowMs)` pure function with all five strategy branches in `src/ui/grouping.ts`
+- [x] P007F006T003 Refactor `src/ui/grouping.ts` if file exceeds 100 non-comment lines — extract per-strategy logic as private unexported helper functions within the same file
 
 ### P007F007 — `renderEntryLine()`
 
-- [ ] P007F007T001 Write black-box tests for `renderEntryLine(entry, config, theme, nowMs, profiles)` in `src/ui/entry-line.test.ts`: `plain` field contains label text, source abbreviation, relative age; `raw` field contains OSC 8 sequence for known scheme; `entryId` matches entry (must FAIL)
-- [ ] P007F007T002 Implement `renderEntryLine()` assembling emoji + OSC 8-linked label + source column + age column with `ageColorName` applied to the entire line in `src/ui/entry-line.ts`
+- [x] P007F007T001 Write black-box tests for `renderEntryLine(entry, config, theme, nowMs, profiles)` in `src/ui/entry-line.test.ts`: `plain` field contains label text, source abbreviation, relative age; `raw` field contains OSC 8 sequence for known scheme; `entryId` matches entry (must FAIL)
+- [x] P007F007T002 Implement `renderEntryLine()` assembling emoji + OSC 8-linked label + source column + age column with `ageColorName` applied to the entire line in `src/ui/entry-line.ts`
 
 ### P007F008 — `renderAttentionWidget()` and `renderFooterStatus()`
 

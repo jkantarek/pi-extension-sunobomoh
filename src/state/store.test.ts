@@ -77,7 +77,9 @@ describe('StateStore.append()', () => {
   it('returns err(Error) on write failure via injected failing fs', async () => {
     const failingFs: FileSystem = {
       readFile: (): Promise<string> => Promise.resolve(''),
+      writeFile: (): Promise<void> => Promise.reject(new Error('disk full')),
       appendFile: (): Promise<void> => Promise.reject(new Error('disk full')),
+      rename: (): Promise<void> => Promise.reject(new Error('disk full')),
       exists: (): Promise<boolean> => Promise.resolve(false),
     };
     const store = createStateStore('/irrelevant/path', failingFs, createSystemClock());
