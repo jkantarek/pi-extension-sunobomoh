@@ -69,5 +69,20 @@ describe('githubWatcher', () => {
     const tags = githubWatcher.extractTags(evt, cfg);
     expect(tags).toEqual([unsafeTagId('informational')]);
   });
+  it('watch returns empty array when fetch responds with non-ok status', async () => {
+    const fakeFetch = async (): Promise<{ ok: boolean; json: () => Promise<unknown> }> =>
+      Promise.resolve({ ok: false, json: async () => Promise.resolve([]) });
+    const cfg = { owner: 'a', repo: 'b', fetch: fakeFetch as never };
+    const result = await githubWatcher.watch(cfg, new AbortController().signal);
+    expect(result).toHaveLength(0);
+  });
+
+  it('uses globalThis.fetch when cfg.fetch is omitted (covers ?? branch)', async () => {
+    const ctrl = new AbortController();
+    ctrl.abort();
+    // fetch is omitted — the ?? globalThis.fetch branch fires
+    // The aborted signal causes the request to fail, but the branch is covered
+    await expect(githubWatcher.watch({ owner: 'a', repo: 'b' }, ctrl.signal)).rejects.toBeDefined();
+  });
 });
 /* eslint-enable max-lines-per-function */

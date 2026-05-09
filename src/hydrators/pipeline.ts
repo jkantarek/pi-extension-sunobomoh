@@ -1,5 +1,6 @@
 import type { Result } from '../core/result.js';
 import { ok, err, isOk } from '../core/result.js';
+import { toError } from '../core/errors.js';
 import type { StateEntry } from '../state/types.js';
 import type { HydratorDefinition } from './types.js';
 import { assertHydrationInvariants } from './invariants.js';
@@ -16,7 +17,7 @@ const toHydrationError = (
   entries: readonly StateEntry[],
 ): HydrationError => ({
   hydratorId,
-  message: cause instanceof Error ? cause.message : String(cause),
+  message: toError(cause).message,
   entriesAtFailure: entries,
 });
 

@@ -29,5 +29,3 @@ export interface Group {
 }
 
 export type GroupingStrategy = (entries: readonly StateEntry[], nowMs: number) => readonly Group[];
-
-export const DEFAULT_GROUPING: GroupingStrategyName = 'none';

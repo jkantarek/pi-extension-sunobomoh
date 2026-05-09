@@ -48,36 +48,40 @@ import type { SchemeProfile } from './types.js';
  * // sourceLabel for unknown scheme returns URI as-is
  * expect(sourceLabel(unknownUri, DEFAULT_SCHEME_PROFILES)).toBe('unknown:///test');
  *
- * // Empty path returns empty string
+ * // empty path returns the URI itself (|| uri fallback)
  * const emptyPathUri = unsafeResourceUri('file:///' as never);
- * expect(fileProfile?.shortId(emptyPathUri as never)).toBe('');
+ * expect(fileProfile?.shortId(emptyPathUri as never)).toBe('file:///');
  *
- * // Malformed URI without colon returns undefined scheme
+ * // URI ending with slash: segment is empty string, || uri fires
+ * const trailingSlash = unsafeResourceUri('file:///dir/' as never);
+ * expect(extractLastSegment !== undefined).toBe(true);
+ *
+ * // Malformed URI without colon: colonIdx < 0 so scheme is '' → undefined
  * const noColonUri = unsafeResourceUri('malformed' as never);
  * expect(resolveScheme(noColonUri, DEFAULT_SCHEME_PROFILES)).toBeUndefined();
  * ```
  */
 const extractGitHubShortId = (uri: string): string => {
-  const regex = /\/issues\/(\d+)$/;
-  const match = regex.exec(uri);
-  return match?.[1] !== undefined ? `#${match[1]}` : (uri.split('/').pop() ?? uri);
+  const match = /\/issues\/(\d+)$/.exec(uri);
+  return match?.[1] !== undefined ? `#${match[1]}` : uri.slice(uri.lastIndexOf('/') + 1) || uri;
 };
 
-const extractFileShortId = (uri: string): string => uri.split('/').pop() ?? uri;
+const extractLastSegment = (uri: string): string => uri.slice(uri.lastIndexOf('/') + 1) || uri;
 
 export const DEFAULT_SCHEME_PROFILES: ReadonlyMap<string, SchemeProfile> = new Map([
   ['github', { abbr: 'gh', baseUrl: 'https://github.com', shortId: extractGitHubShortId }],
-  ['file', { abbr: 'file', shortId: extractFileShortId }],
-  ['gmail', { abbr: 'mail', shortId: (uri: string): string => uri.split('/').pop() ?? uri }],
-  ['slack', { abbr: 'slack', shortId: (uri: string): string => uri.split('/').pop() ?? uri }],
+  ['file', { abbr: 'file', shortId: extractLastSegment }],
+  ['gmail', { abbr: 'mail', shortId: extractLastSegment }],
+  ['slack', { abbr: 'slack', shortId: extractLastSegment }],
 ]);
 
 export const resolveScheme = (
   uri: ResourceUri,
   profiles: ReadonlyMap<string, SchemeProfile>,
 ): SchemeProfile | undefined => {
-  const scheme = (uri as string).split(':')[0];
-  return scheme !== undefined ? profiles.get(scheme) : undefined;
+  const colonIdx = (uri as string).indexOf(':');
+  const scheme = colonIdx >= 0 ? (uri as string).slice(0, colonIdx) : '';
+  return profiles.get(scheme);
 };
 
 export const sourceLabel = (

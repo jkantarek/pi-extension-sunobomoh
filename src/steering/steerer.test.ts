@@ -95,4 +95,16 @@ describe('createSteerer', () => {
       expect(result.value.llmOverrides.length).toBeGreaterThan(0);
     }
   });
+
+  it('demotes entry with needsAttention:true and low score (covers buildDemotions final map)', async () => {
+    const store = await createTmpStore('demote-flagged');
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    const entry = createEntry('01J3XYZ1234567890ABCDEFGHL', ['informational'], twelveHoursAgo);
+    await store.append([{ ...entry, needsAttention: true }]);
+    await store.load();
+    const steerer = createSteerer(DEFAULT_STEERING_CONFIG, createTagRegistry(), store);
+    const result = await steerer.run(new AbortController().signal);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) expect(result.value.demoted.length).toBeGreaterThan(0);
+  });
 });

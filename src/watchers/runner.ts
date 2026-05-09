@@ -1,5 +1,6 @@
 import type { Result } from '../core/result.js';
 import { ok, err, isOk } from '../core/result.js';
+import { toError } from '../core/errors.js';
 import type { WatcherDefinition } from './types.js';
 import type { StateEntry } from '../state/types.js';
 import type { Clock } from '../core/ports.js';
@@ -42,7 +43,7 @@ interface WatchExec<C> {
 
 const toWatcherError = (watcherId: string, cause: unknown): WatcherRunError => ({
   watcherId,
-  message: cause instanceof Error ? cause.message : String(cause),
+  message: toError(cause).message,
 });
 
 const enrichWithTags = (

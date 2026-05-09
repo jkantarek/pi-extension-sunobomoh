@@ -1,6 +1,7 @@
 import type { Result } from '../core/result.js';
 import type { FileSystem, Clock } from '../core/ports.js';
 import { ok, err } from '../core/result.js';
+import { toError } from '../core/errors.js';
 import type { StateLineJson } from './types.js';
 import {
   isStateEntryJson,
@@ -51,7 +52,7 @@ const toResult = async (fn: () => Promise<void>): Promise<Result<void>> => {
     await fn();
     return ok(undefined);
   } catch (e) {
-    return err(e instanceof Error ? e : new Error(String(e)));
+    return err(toError(e));
   }
 };
 

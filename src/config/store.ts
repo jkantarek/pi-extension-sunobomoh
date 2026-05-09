@@ -1,6 +1,7 @@
 import type { FileSystem } from '../core/ports.js';
 import type { Result } from '../core/result.js';
 import { ok, err } from '../core/result.js';
+import { toError } from '../core/errors.js';
 import type { SunobomohConfig, WatcherConfigEntry } from './types.js';
 
 export interface ConfigStoreAPI {
@@ -42,7 +43,7 @@ export const createConfigStore = (filePath: string, fs: FileSystem): ConfigStore
     try {
       return ok(JSON.parse(content));
     } catch (error) {
-      return err(error instanceof Error ? error : new Error(String(error)));
+      return err(toError(error));
     }
   },
   async save(config: SunobomohConfig): Promise<Result<void>> {
@@ -52,7 +53,7 @@ export const createConfigStore = (filePath: string, fs: FileSystem): ConfigStore
       await fs.rename(tmpPath, filePath);
       return ok(undefined);
     } catch (error) {
-      return err(error instanceof Error ? error : new Error(String(error)));
+      return err(toError(error));
     }
   },
   async addWatcher(entry: WatcherConfigEntry): Promise<Result<SunobomohConfig>> {

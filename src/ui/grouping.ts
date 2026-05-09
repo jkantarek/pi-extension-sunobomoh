@@ -1,5 +1,7 @@
 import type { StateEntry } from '../state/types.js';
-import type { Group } from './types.js';
+import type { Group, GroupingStrategyName } from './types.js';
+
+export const DEFAULT_GROUPING: GroupingStrategyName = 'none';
 
 /**
  * @example
@@ -97,6 +99,17 @@ import type { Group } from './types.js';
  * const noTagResult = groupEntries([noTagEntry, entry2], 'tag', emojiMap, now);
  * expect(noTagResult).toHaveLength(1);
  * expect(noTagResult[0].entries).toEqual([entry2]);
+ *
+ * // Tag strategy: two entries with SAME tag — list accumulates (covers collectByTag list branch)
+ * const entry3: StateEntry = { ...entry2, id: 'id-3' as never };
+ * const sameTagResult = groupEntries([entry2, entry3], 'tag', emojiMap, now);
+ * expect(sameTagResult).toHaveLength(1);
+ * expect(sameTagResult[0].entries).toHaveLength(2);
+ *
+ * // Tag strategy: tag not in emojiMap falls back to 🔵 (covers ?? '🔵' branch)
+ * const customEmoji = new Map([['urgent', '⚠️']]);
+ * const customResult = groupEntries([entry2], 'tag', customEmoji, now);
+ * expect(customResult[0]?.header).toContain('🔵');
  * ```
  */
 export const groupEntries = (

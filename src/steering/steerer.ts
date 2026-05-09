@@ -1,4 +1,5 @@
 import type { Clock } from '../core/ports.js';
+import { toError } from '../core/errors.js';
 import type { Registry } from '../core/registry.js';
 import type { TagDefinition } from '../tags/types.js';
 import type { StateStoreAPI } from '../state/store.js';
@@ -153,7 +154,7 @@ export const createSteerer = (
         ? ok({ promoted, demoted, borderline, llmOverrides })
         : err(appendResult.error);
     } catch (e) {
-      return err(e instanceof Error ? e : new Error(String(e)));
+      return err(toError(e));
     }
   },
 });
