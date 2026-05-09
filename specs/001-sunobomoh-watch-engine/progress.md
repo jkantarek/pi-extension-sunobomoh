@@ -150,3 +150,35 @@ Started: 2026-05-08 20:05:45
 - Run all 4 gates after EVERY task: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test`
 
 ---
+
+## Iteration 4 - 2026-05-08T22:17:30-05:00
+
+**User Story**: P004 Watcher Pipeline — Partial progress  
+**Tasks Completed**:
+
+- [x] P004F001T001: Wrote inline doctests for BUILTIN_TAGS (urgent, needs-review, informational, stale) and UNKNOWN_OUTCOME_SCHEMA validation
+- [x] P004F001T002: Implemented TagDefinition, TagOutcome, UNKNOWN_OUTCOME_SCHEMA, BUILTIN_TAGS (4 tags with correct weights)
+- [x] P004F002T001: Wrote inline doctest for createTagRegistry() — pre-registers BUILTIN_TAGS, custom tags can be added
+- [x] P004F002T002: Implemented createTagRegistry() wrapping createRegistry<TagDefinition>() with pre-populated built-in tags
+- [x] P004F003T001: Wrote inline doctests for createTagOutcome() and initializeOutcomes() — outcome map creation, fallback handling
+- [x] P004F003T002: Implemented createTagOutcome() and initializeOutcomes() as pure functions
+
+**Tasks Remaining in Story**: P004F004–P004F011 (8 feature groups = 16+ tasks)  
+**Commit**: No commit — partial progress  
+**Files Changed**:
+
+- src/tags/types.ts (created)
+- src/tags/registry.ts (created)
+- src/tags/outcomes.ts (created)
+- specs/001-sunobomoh-watch-engine/tasks.md (marked 6 tasks [x])
+
+**Learnings**:
+
+- `typebox` v1.x uses namespace exports: `import * as Type from 'typebox'` and `import type { TSchema } from 'typebox/type'`
+- Inline doctests use `await import('...')` for external modules inside the fence, not static imports
+- `max-lines-per-function: 10` includes the doctest fence content — keep doctests concise or function will exceed limit
+- ESLint `@typescript-eslint/no-non-null-assertion` forbids `!` operator — use explicit `if (!x) return` guards instead
+- For-loop body assignment can be inlined: `for (const x of xs) map.set(k, fn(x))` stays under 10-line limit
+- JSDoc prose comments violate `local/jsdoc-examples-only` rule — only `@example` blocks allowed
+
+---

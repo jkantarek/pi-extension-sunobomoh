@@ -168,33 +168,33 @@ store. Independently testable by injecting a fake `WatcherDefinition` with no ne
 
 ### P004F001 — Tag domain types: `TagDefinition`, `UNKNOWN_OUTCOME_SCHEMA`, `BUILTIN_TAGS`
 
-- [ ] P004F001T001 [P] Write inline doctest asserting `BUILTIN_TAGS` contains `urgent`, `needs-review`, `informational`, `stale` with correct `attentionWeight` values and that `UNKNOWN_OUTCOME_SCHEMA` validates any value in `src/tags/types.ts` (must FAIL)
-- [ ] P004F001T002 [P] Implement `TagDefinition`, `TagOutcome`, `UNKNOWN_OUTCOME_SCHEMA`, `BUILTIN_TAGS` constant in `src/tags/types.ts`
+- [x] P004F001T001 [P] Write inline doctest asserting `BUILTIN_TAGS` contains `urgent`, `needs-review`, `informational`, `stale` with correct `attentionWeight` values and that `UNKNOWN_OUTCOME_SCHEMA` validates any value in `src/tags/types.ts` (must FAIL)
+- [x] P004F001T002 [P] Implement `TagDefinition`, `TagOutcome`, `UNKNOWN_OUTCOME_SCHEMA`, `BUILTIN_TAGS` constant in `src/tags/types.ts`
 
 ### P004F002 — `createTagRegistry()`
 
-- [ ] P004F002T001 [P] Write inline doctest for `createTagRegistry()`: pre-registers all `BUILTIN_TAGS`, custom tags can be added, `has` and `get` work correctly in `src/tags/registry.ts` (must FAIL)
-- [ ] P004F002T002 [P] Implement `createTagRegistry()` as a thin wrapper over `createRegistry<TagDefinition>()` that pre-populates built-in tags in `src/tags/registry.ts`
+- [x] P004F002T001 [P] Write inline doctest for `createTagRegistry()`: pre-registers all `BUILTIN_TAGS`, custom tags can be added, `has` and `get` work correctly in `src/tags/registry.ts` (must FAIL)
+- [x] P004F002T002 [P] Implement `createTagRegistry()` as a thin wrapper over `createRegistry<TagDefinition>()` that pre-populates built-in tags in `src/tags/registry.ts`
 
 ### P004F003 — `createTagOutcome()` and `initializeOutcomes()`
 
-- [ ] P004F003T001 [P] Write inline doctests for `createTagOutcome(def)` and `initializeOutcomes(tagIds, registry)` — assert outcome map size, default status, fallback to `BUILTIN_TAGS[0]` for unknown ids in `src/tags/outcomes.ts` (must FAIL)
-- [ ] P004F003T002 [P] Implement `createTagOutcome()` and `initializeOutcomes()` as pure functions in `src/tags/outcomes.ts`
+- [x] P004F003T001 [P] Write inline doctests for `createTagOutcome(def)` and `initializeOutcomes(tagIds, registry)` — assert outcome map size, default status, fallback to `BUILTIN_TAGS[0]` for unknown ids in `src/tags/outcomes.ts` (must FAIL)
+- [x] P004F003T002 [P] Implement `createTagOutcome()` and `initializeOutcomes()` as pure functions in `src/tags/outcomes.ts`
 
 ### P004F004 — `applyTagsToEntry()`
 
-- [ ] P004F004T001 [P] Write inline doctest for `applyTagsToEntry(entry, tagIds, registry)` — assert `outcomes` map populated, unknown tagIds handled gracefully in `src/tags/apply.ts` (must FAIL)
-- [ ] P004F004T002 [P] Implement `applyTagsToEntry()` pure function in `src/tags/apply.ts`
+- [x] P004F004T001 [P] Write inline doctest for `applyTagsToEntry(entry, tagIds, registry)` — assert `outcomes` map populated, unknown tagIds handled gracefully in `src/tags/apply.ts` (must FAIL)
+- [x] P004F004T002 [P] Implement `applyTagsToEntry()` pure function in `src/tags/apply.ts`
 
 ### P004F005 — `WatcherDefinition` and `BoundWatcher` types + `createWatcherRegistry()`
 
-- [ ] P004F005T001 [P] Write inline doctest for `createWatcherRegistry()`: register a watcher, `get` by `WatcherId`, `has`, `getAll` in `src/watchers/registry.ts` (must FAIL)
-- [ ] P004F005T002 [P] Define `WatcherDefinition<TConfig, TEvent>` and `BoundWatcher<TConfig>` interfaces in `src/watchers/types.ts` and implement `createWatcherRegistry()` wrapping `createRegistry` in `src/watchers/registry.ts`
+- [x] P004F005T001 [P] Write inline doctest for `createWatcherRegistry()`: register a watcher, `get` by `WatcherId`, `has`, `getAll` in `src/watchers/registry.ts` (must FAIL)
+- [x] P004F005T002 [P] Define `WatcherDefinition<TConfig, TEvent>` and `BoundWatcher<TConfig>` interfaces in `src/watchers/types.ts` and implement `createWatcherRegistry()` wrapping `createRegistry` in `src/watchers/registry.ts`
 
 ### P004F006 — `toStateEntry()` pure coercion
 
-- [ ] P004F006T001 Write inline doctest for `toStateEntry(event, def, config, clock, ids)`: assert `label`, `sourceUri`, `tags`, `id` length (26), `needsAttention: false`, `timestamp` is ISO string in `src/watchers/coerce.ts` (must FAIL)
-- [ ] P004F006T002 Implement `toStateEntry()` in `src/watchers/coerce.ts` using `ids.next()`, `clock.now()`, `def.extractUri/Label/Tags`
+- [x] P004F006T001 Write inline doctest for `toStateEntry(event, def, config, clock, ids)`: assert `label`, `sourceUri`, `tags`, `id` length (26), `needsAttention: false`, `timestamp` is ISO string in `src/watchers/coerce.ts` (must FAIL)
+- [x] P004F006T002 Implement `toStateEntry()` in `src/watchers/coerce.ts` using `ids.next()`, `clock.now()`, `def.extractUri/Label/Tags`
 
 ### P004F007 — `HydratorDefinition` types + `assertHydrationInvariants()`
 
